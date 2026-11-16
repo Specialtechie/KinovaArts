@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-parchment font-sans text-ink antialiased;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded px-6 py-3 text-sm font-bold tracking-wide transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn border border-ink bg-ink text-panel;
+  }
+  .btn-ghost {
+    @apply btn border border-ink bg-transparent text-ink;
+  }
+  .pill {
+    @apply inline-block rounded-full border border-ink px-4 py-1.5 text-xs font-semibold;
+  }
+  .pill-active {
+    @apply bg-ink text-panel;
+  }
+  .section-title {
+    @apply font-display text-3xl font-semibold;
+  }
+  .field-label {
+    @apply mb-1 block text-xs font-bold uppercase tracking-wide text-ink/60;
+  }
+  .field-input {
+    @apply w-full rounded border border-line bg-panel px-3 py-2 text-sm;
+  }
+}

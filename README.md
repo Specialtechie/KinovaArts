@@ -1,0 +1,53 @@
+# Kinova Arts
+
+This repository contains the two application directories:
+
+- `backend/` - Laravel 12 API
+- `frontend/` - Next.js storefront and admin UI
+
+## Run locally
+
+Prerequisites: PHP 8.2+ with PDO MySQL enabled, Composer, Node.js, npm, and a running MySQL server.
+
+### Backend
+
+For a fresh checkout, from the repository root:
+
+```powershell
+Set-Location backend
+Copy-Item .env.example .env
+composer install
+php artisan key:generate
+```
+
+Create a MySQL database and a dedicated database user, then set `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` in `backend/.env`. Do not use MySQL's root account for the application. Keep credentials in `.env`; do not commit them.
+
+For an empty database, set `LOCAL_ADMIN_EMAIL` and `LOCAL_ADMIN_PASSWORD` in `backend/.env` if you want the local admin account, then run:
+
+```powershell
+php artisan migrate --seed
+php artisan storage:link
+php artisan serve --host=127.0.0.1 --port=8001
+```
+
+The API health endpoint is `http://127.0.0.1:8001/api/health`. `migrate --seed` is for initializing a fresh local database; it is not the routine production deploy command. Existing SQLite records are not copied automatically when changing database connections.
+
+Uploaded files are stored on Laravel's public disk. Email uses the log mailer locally. Paystack checkout requires a valid test secret in `PAYSTACK_SECRET_KEY`.
+
+### Frontend
+
+In another terminal, from the repository root:
+
+```powershell
+Set-Location frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`. Set `NEXT_PUBLIC_API_URL=http://localhost:8001` in `frontend/.env.local` to connect to the local API.
+
+## Deployment
+
+Deploy `frontend/` as the Vercel project root and `backend/` to a Laravel-compatible host such as WhoGoHost. Configure production MySQL credentials, `NEXT_PUBLIC_API_URL`, `FRONTEND_URL`, mail, storage, and payment settings in the host's environment configuration. Run only pending migrations with `php artisan migrate --force`; never use `migrate:fresh`, `migrate:refresh`, or `db:wipe` on production data. Back up the database and uploaded files before deployments, and ensure the host preserves Laravel's `storage/app/public` uploads.
+
+Automated tests intentionally use an isolated in-memory SQLite database; this does not change the application's MySQL runtime configuration.
