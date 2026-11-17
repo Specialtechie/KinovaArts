@@ -32,6 +32,16 @@ php artisan serve --host=127.0.0.1 --port=8001
 
 The API health endpoint is `http://127.0.0.1:8001/api/health`. `migrate --seed` is for initializing a fresh local database; it is not the routine production deploy command. Existing SQLite records are not copied automatically when changing database connections.
 
+To apply the category, collection, and product descriptions to a database, run from `backend/`:
+
+```powershell
+php artisan db:seed --class='Database\Seeders\CategoryDescriptionsSeeder'
+php artisan db:seed --class='Database\Seeders\CollectionDescriptionsSeeder'
+php artisan db:seed --class='Database\Seeders\ProductDescriptionsSeeder'
+```
+
+The category and collection seeders create missing records with names derived from their slugs. For existing records, they preserve names and images; the collection seeder also sets `featured`. The product seeder creates missing products with generated unique SKUs, configured USD prices, active status, stock of one, and their matching category; it creates no image records. For products already present, it only fills a blank description and preserves their other fields.
+
 Uploaded files are stored on Laravel's public disk. Email uses the log mailer locally. Paystack checkout requires a valid test secret in `PAYSTACK_SECRET_KEY`.
 
 ### Frontend
@@ -49,5 +59,13 @@ Open `http://localhost:3000`. Set `NEXT_PUBLIC_API_URL=http://localhost:8001` in
 ## Deployment
 
 Deploy `frontend/` as the Vercel project root and `backend/` to a Laravel-compatible host such as WhoGoHost. Configure production MySQL credentials, `APP_URL` (the public API origin), `NEXT_PUBLIC_API_URL`, `FRONTEND_URL`, mail, storage, and payment settings in the host's environment configuration. Run `php artisan storage:link` on the backend host so uploaded files are reachable at `/storage/...`. Run only pending migrations with `php artisan migrate --force`; never use `migrate:fresh`, `migrate:refresh`, or `db:wipe` on production data. Back up the database and uploaded files before deployments, and ensure the host preserves Laravel's `storage/app/public` uploads.
+
+After deploying the seeders, run them from `backend/` on production:
+
+```sh
+php artisan db:seed --class='Database\Seeders\CategoryDescriptionsSeeder' --force
+php artisan db:seed --class='Database\Seeders\CollectionDescriptionsSeeder' --force
+php artisan db:seed --class='Database\Seeders\ProductDescriptionsSeeder' --force
+```
 
 Automated tests intentionally use an isolated in-memory SQLite database; this does not change the application's MySQL runtime configuration.

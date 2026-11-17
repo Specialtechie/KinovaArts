@@ -12,6 +12,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call(CategoryDescriptionsSeeder::class);
+        $this->call(CollectionDescriptionsSeeder::class);
+        $this->call(ProductDescriptionsSeeder::class);
+
         $email = config('services.local_admin.email');
         $password = config('services.local_admin.password');
 
