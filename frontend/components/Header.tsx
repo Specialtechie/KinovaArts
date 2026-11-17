@@ -12,6 +12,7 @@ export default function Header() {
   const router = useRouter();
   const [panel, setPanel] = useState<'menu' | 'search' | null>(null);
   const [q, setQ] = useState('');
+  const [logoFailed, setLogoFailed] = useState(false);
 
   useEffect(() => {
     setPanel(null);
@@ -38,7 +39,18 @@ export default function Header() {
       <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
         <Link href="/" className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/KinovaLogoLight.jpg" alt="Kinova Arts" className="h-8 w-8 rounded object-contain" />
+          {logoFailed ? (
+            <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded bg-ink font-display font-semibold text-gold">
+              K
+            </span>
+          ) : (
+            <img
+              src="/images/KinovaLogoLight.jpg"
+              alt=""
+              onError={() => setLogoFailed(true)}
+              className="h-8 w-8 rounded object-contain"
+            />
+          )}
           <span className="font-display text-xl font-semibold">Kinova Arts</span>
         </Link>
 

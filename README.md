@@ -48,6 +48,6 @@ Open `http://localhost:3000`. Set `NEXT_PUBLIC_API_URL=http://localhost:8001` in
 
 ## Deployment
 
-Deploy `frontend/` as the Vercel project root and `backend/` to a Laravel-compatible host such as WhoGoHost. Configure production MySQL credentials, `NEXT_PUBLIC_API_URL`, `FRONTEND_URL`, mail, storage, and payment settings in the host's environment configuration. Run only pending migrations with `php artisan migrate --force`; never use `migrate:fresh`, `migrate:refresh`, or `db:wipe` on production data. Back up the database and uploaded files before deployments, and ensure the host preserves Laravel's `storage/app/public` uploads.
+Deploy `frontend/` as the Vercel project root and `backend/` to a Laravel-compatible host such as WhoGoHost. Configure production MySQL credentials, `APP_URL` (the public API origin), `NEXT_PUBLIC_API_URL`, `FRONTEND_URL`, mail, storage, and payment settings in the host's environment configuration. Run `php artisan storage:link` on the backend host so uploaded files are reachable at `/storage/...`. Run only pending migrations with `php artisan migrate --force`; never use `migrate:fresh`, `migrate:refresh`, or `db:wipe` on production data. Back up the database and uploaded files before deployments, and ensure the host preserves Laravel's `storage/app/public` uploads.
 
 Automated tests intentionally use an isolated in-memory SQLite database; this does not change the application's MySQL runtime configuration.
