@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { catalog } from '@/lib/api';
 import BannerSlider from '@/components/BannerSlider';
-import BannerRow from '@/components/BannerRow';
 import ProductCard from '@/components/ProductCard';
 
 export default async function Home() {
@@ -10,7 +9,7 @@ export default async function Home() {
   return (
     <div>
       {/* Hero */}
-      <section className="grid gap-10 px-6 pb-12 pt-16 md:grid-cols-[minmax(0,1fr)_minmax(0,900px)] md:items-center md:px-10 md:pt-20">
+      <section className="grid gap-10 px-6 pb-14 pt-16 md:grid-cols-2 md:items-center md:px-10 md:pt-20">
         <div className="text-center md:text-left">
           <span className="pill pill-active">A curated destination for African art and craft</span>
           <h1 className="mt-5 font-display text-5xl font-semibold leading-[1.02] md:text-6xl">
@@ -27,8 +26,6 @@ export default async function Home() {
         </div>
         <BannerSlider banners={banners} />
       </section>
-
-      <BannerRow banners={banners} />
 
       {/* Featured collections */}
       {featured_collections.length > 0 && (
