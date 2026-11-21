@@ -6,6 +6,7 @@ import { firstError } from '@/lib/client';
 import { useAuth } from './store';
 
 const API = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 
 export default function CustomOrderForm({ product }: { product: { id: number; name: string } | null }) {
   const router = useRouter();
@@ -34,8 +35,8 @@ export default function CustomOrderForm({ product }: { product: { id: number; na
       return;
     }
     for (const file of Array.from(files ?? [])) {
-      if (file.size > 8 * 1024 * 1024) {
-        setError(`"${file.name}" is larger than 8 MB.`);
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        setError(`"${file.name}" is larger than 2 MB. Please choose a smaller image.`);
         return;
       }
     }
@@ -129,7 +130,7 @@ export default function CustomOrderForm({ product }: { product: { id: number; na
       </div>
 
       <div>
-        <label className="field-label">Reference images (optional, up to 3)</label>
+        <label className="field-label">Reference images (optional, up to 3; 2 MB max each)</label>
         <input type="file" name="images" accept="image/*" multiple className="field-input" />
         <p className="mt-1 text-xs text-ink/50">Photos of inspiration pieces, sketches, or the space it&apos;s for all help.</p>
       </div>

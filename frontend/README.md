@@ -56,6 +56,8 @@ The backend's `FRONTEND_URL` should be `http://localhost:3000`. Local setup deta
 | Piece | How |
 |---|---|
 | Catalog pages | Server-rendered, data cached for 60 s from the API |
+| Currency display | Defaults from Vercel's country header, can be changed with the currency selector, and uses daily cached USD rates from ExchangeRate-API |
+| Checkout currency | Paystack currently charges NGN; local-currency prices are estimates until additional currencies are enabled for the merchant account |
 | Sign-in | Popup posts to `/api/auth/*` (Next route handlers). The Laravel token is stored in an **httpOnly cookie**, never in browser JavaScript |
 | Browser calls (wishlist, reviews, checkout) | Go through `/api/proxy/...`, which adds the token from the cookie |
 | Cart | Lives in `localStorage` on the device. `/api/cart/quote` prices it, so prices can't be tampered with |

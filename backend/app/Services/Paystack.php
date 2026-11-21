@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Setting;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -16,7 +15,7 @@ class Paystack
 
     public static function rate(): float
     {
-        return (float) Setting::get('usd_to_ngn_rate', 1500);
+        return app(ExchangeRates::class)->usdToNgn();
     }
 
     /** Starts a transaction and returns the hosted payment page URL. Prices are USD; Paystack charges NGN. */

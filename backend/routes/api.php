@@ -6,10 +6,13 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CheckoutController;
+use App\Http\Controllers\Api\ContactInquiryController;
 use App\Http\Controllers\Api\CustomOrderController;
+use App\Http\Controllers\Api\CurrencyRateController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json(['ok' => true]));
+Route::get('/currency-rates', [CurrencyRateController::class, 'show']);
 
 /* ---------- Auth ---------- */
 Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
@@ -26,6 +29,7 @@ Route::get('/pages/{slug}', [CatalogController::class, 'pageShow']);
 
 /* ---------- Public actions ---------- */
 Route::post('/cart/quote', [CartController::class, 'quote']);
+Route::post('/contact-inquiries', [ContactInquiryController::class, 'store'])->middleware('throttle:5,1');
 Route::post('/custom-orders', [CustomOrderController::class, 'store'])->middleware('throttle:10,1');
 
 /* ---------- Signed-in customer ---------- */

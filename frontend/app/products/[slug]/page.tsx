@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { api, catalog } from '@/lib/api';
-import { usd } from '@/lib/format';
 import AddToBag from '@/components/AddToBag';
+import CurrencyPrice from '@/components/CurrencyPrice';
 import ProductCard from '@/components/ProductCard';
 import ProductGallery from '@/components/ProductGallery';
 import ReviewForm from '@/components/ReviewForm';
@@ -61,11 +61,11 @@ export default async function ProductPage({ params }: Props) {
           <div className="mt-4 flex items-center gap-3">
             {p.sale_price ? (
               <>
-                <span className="text-2xl font-semibold text-clay">{usd(p.sale_price)}</span>
-                <span className="text-ink/50 line-through">{usd(p.price)}</span>
+                <CurrencyPrice amount={p.sale_price} className="text-2xl font-semibold text-clay" />
+                <CurrencyPrice amount={p.price} className="text-ink/50 line-through" />
               </>
             ) : (
-              <span className="text-2xl font-semibold">{usd(p.price)}</span>
+              <CurrencyPrice amount={p.price} className="text-2xl font-semibold" />
             )}
             <span className="rounded-full border border-line px-3 py-1 text-xs">{stockLabel}</span>
           </div>

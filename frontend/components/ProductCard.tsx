@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { mainImage, usd } from '@/lib/format';
+import { mainImage } from '@/lib/format';
+import CurrencyPrice from './CurrencyPrice';
 
 export default function ProductCard({ product }: { product: any }) {
   const image = mainImage(product);
@@ -24,11 +25,11 @@ export default function ProductCard({ product }: { product: any }) {
         <div className="mt-auto flex items-center gap-2 pt-2">
           {product.sale_price ? (
             <>
-              <span className="font-semibold text-clay">{usd(product.sale_price)}</span>
-              <span className="text-sm text-ink/50 line-through">{usd(product.price)}</span>
+              <CurrencyPrice amount={product.sale_price} className="font-semibold text-clay" />
+              <CurrencyPrice amount={product.price} className="text-sm text-ink/50 line-through" />
             </>
           ) : (
-            <span className="font-semibold">{usd(product.price)}</span>
+            <CurrencyPrice amount={product.price} className="font-semibold" />
           )}
         </div>
       </div>

@@ -4,6 +4,7 @@ import { Suspense, useEffect, type ReactNode } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AuthProvider, CartProvider, useAuth } from './store';
 import AuthModal from './AuthModal';
+import { CurrencyProvider, type ExchangeRates } from './CurrencyProvider';
 
 /** Server pages redirect signed-out visitors to /?signin=1&next=...; this opens the popup for them. */
 function AuthQueryOpener() {
@@ -22,16 +23,26 @@ function AuthQueryOpener() {
   return null;
 }
 
-export default function Providers({ children }: { children: ReactNode }) {
+export default function Providers({
+  children,
+  initialCurrency,
+  initialRates,
+}: {
+  children: ReactNode;
+  initialCurrency: string;
+  initialRates: ExchangeRates | null;
+}) {
   return (
-    <AuthProvider>
-      <CartProvider>
-        {children}
-        <Suspense fallback={null}>
-          <AuthQueryOpener />
-        </Suspense>
-        <AuthModal />
-      </CartProvider>
-    </AuthProvider>
+    <CurrencyProvider initialCurrency={initialCurrency} initialRates={initialRates}>
+      <AuthProvider>
+        <CartProvider>
+          {children}
+          <Suspense fallback={null}>
+            <AuthQueryOpener />
+          </Suspense>
+          <AuthModal />
+        </CartProvider>
+      </AuthProvider>
+    </CurrencyProvider>
   );
 }

@@ -4,7 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\CustomOrderRequest;
+use App\Models\Page;
+use App\Mail\ContactInquiryReceivedMail;
+use App\Services\Paystack;
+use Database\Seeders\PageContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class StoreApiTest extends TestCase
@@ -41,6 +48,113 @@ class StoreApiTest extends TestCase
         $this->getJson('/api/products')
             ->assertOk()
             ->assertJsonStructure(['data', 'current_page', 'per_page', 'total']);
+    }
+
+    public function test_contact_inquiry_is_emailed_to_the_configured_support_inbox(): void
+    {
+        Mail::fake();
+        config(['services.admin_notify_email' => 'support@example.test']);
+
+        $this->postJson('/api/contact-inquiries', [
+            'type' => 'complaint',
+            'name' => 'Customer Example',
+            'email' => 'customer@example.test',
+            'order_number' => 'KA-TEST-100',
+            'subject' => 'An item arrived damaged',
+            'message' => 'The wall hanging arrived with visible damage.',
+            'company_website' => '',
+        ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Your message has been sent.');
+
+        Mail::assertSent(ContactInquiryReceivedMail::class, fn (ContactInquiryReceivedMail $mail) => (
+            $mail->hasTo('support@example.test')
+            && $mail->type === 'complaint'
+            && $mail->email === 'customer@example.test'
+            && $mail->orderNumber === 'KA-TEST-100'
+        ));
+    }
+
+    public function test_contact_inquiry_requires_a_configured_inbox_and_valid_message(): void
+    {
+        Mail::fake();
+        config(['services.admin_notify_email' => null]);
+
+        $this->postJson('/api/contact-inquiries', [
+            'type' => 'enquiry',
+            'name' => 'Customer Example',
+            'email' => 'customer@example.test',
+            'subject' => 'A question',
+            'message' => 'Short',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['message']);
+
+        $this->postJson('/api/contact-inquiries', [
+            'type' => 'enquiry',
+            'name' => 'Customer Example',
+            'email' => 'customer@example.test',
+            'subject' => 'A question',
+            'message' => 'I would like to know more about this item.',
+            'company_website' => 'spam.example',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['company_website']);
+
+        $this->postJson('/api/contact-inquiries', [
+            'type' => 'enquiry',
+            'name' => 'Customer Example',
+            'email' => 'customer@example.test',
+            'subject' => 'A question',
+            'message' => 'I would like to know more about this item.',
+        ])
+            ->assertServiceUnavailable();
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_page_content_seeder_creates_public_pages_without_overwriting_existing_copy(): void
+    {
+        $seeder = new PageContentSeeder();
+        $seeder->run();
+
+        $this->assertDatabaseCount('pages', 6);
+        $this->getJson('/api/pages/faq')
+            ->assertOk()
+            ->assertJsonPath('title', 'Frequently Asked Questions')
+            ->assertJsonPath('slug', 'faq');
+
+        Page::where('slug', 'faq')->update(['content' => 'Edited in the CMS']);
+        $seeder->run();
+
+        $this->assertDatabaseCount('pages', 6);
+        $this->assertSame('Edited in the CMS', Page::where('slug', 'faq')->value('content'));
+    }
+
+    public function test_currency_rates_are_cached_and_include_supported_currency_codes(): void
+    {
+        Cache::flush();
+        Http::fake([
+            'https://open.er-api.com/v6/latest/USD' => Http::response([
+                'result' => 'success',
+                'base_code' => 'USD',
+                'time_last_update_utc' => 'Thu, 20 Nov 2026 00:00:00 +0000',
+                'time_next_update_utc' => 'Fri, 21 Nov 2026 00:00:00 +0000',
+                'rates' => ['USD' => 1, 'NGN' => 1350, 'GHS' => 11.7, 'JPY' => 159],
+            ]),
+        ]);
+
+        $this->getJson('/api/currency-rates')
+            ->assertOk()
+            ->assertJsonPath('base', 'USD')
+            ->assertJsonPath('rates.NGN', 1350)
+            ->assertJsonPath('rates.GHS', 11.7)
+            ->assertJsonPath('rates.JPY', 159)
+            ->assertJsonPath('stale', false);
+
+        $this->getJson('/api/currency-rates')->assertOk();
+        Http::assertSentCount(1);
+        $this->assertSame(1350.0, Paystack::rate());
     }
 
     public function test_admin_user_can_access_admin_dashboard(): void

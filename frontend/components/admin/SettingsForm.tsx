@@ -29,11 +29,10 @@ export default function SettingsForm({ rate }: { rate: number }) {
   return (
     <Card title="Exchange rate">
       <p className="mb-4 max-w-md text-sm text-ink/60">
-        Products are priced in USD. This rate converts an order total to Naira at checkout, because Paystack charges in NGN.
-        Update it whenever the rate moves meaningfully.
+        Live rates update daily for customer prices and NGN checkout. This saved rate is used only if live rates are unavailable and no cached rate exists.
       </p>
       <form onSubmit={submit} className="flex max-w-sm flex-col gap-3">
-        <Field label="1 USD = ? NGN">
+        <Field label="Fallback: 1 USD = ? NGN">
           <input type="number" step="0.01" min="1" required value={value} onChange={(e) => setValue(e.target.value)} className="field-input" />
         </Field>
         {msg && <p className={`text-sm ${msg.ok ? 'text-green' : 'text-clay'}`}>{msg.text}</p>}

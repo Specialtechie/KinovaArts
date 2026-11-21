@@ -38,11 +38,22 @@ To apply the category, collection, and product descriptions to a database, run f
 php artisan db:seed --class='Database\Seeders\CategoryDescriptionsSeeder'
 php artisan db:seed --class='Database\Seeders\CollectionDescriptionsSeeder'
 php artisan db:seed --class='Database\Seeders\ProductDescriptionsSeeder'
+php artisan db:seed --class='Database\Seeders\PageContentSeeder'
 ```
 
 The category and collection seeders create missing records with names derived from their slugs. For existing records, they preserve names and images; the collection seeder also sets `featured`. The product seeder creates missing products with generated unique SKUs, configured USD prices, active status, stock of one, and their matching category; it creates no image records. For products already present, it only fills a blank description and preserves their other fields.
+The page content seeder creates the FAQ, returns, contact, about, privacy policy and terms pages, filling only missing or blank content so existing CMS edits are preserved.
 
-Uploaded files are stored on Laravel's public disk. Email uses the log mailer locally. Paystack checkout requires a valid test secret in `PAYSTACK_SECRET_KEY`.
+Uploaded files are stored on Laravel's public disk. Email uses the log mailer locally by default. To send email through Resend, create an API key, verify your sending domain in Resend, then set these values in `backend/.env`:
+
+```dotenv
+MAIL_MAILER=resend
+RESEND_KEY=re_your_api_key
+MAIL_FROM_ADDRESS=orders@your-verified-domain.com
+MAIL_FROM_NAME="Kinova Arts"
+```
+
+Use a sender address on a domain verified with Resend. Keep the API key private and out of source control. Paystack checkout requires a valid test secret in `PAYSTACK_SECRET_KEY`.
 
 ### Frontend
 
@@ -58,7 +69,7 @@ Open `http://localhost:3000`. Set `NEXT_PUBLIC_API_URL=http://localhost:8001` in
 
 ## Deployment
 
-Deploy `frontend/` as the Vercel project root and `backend/` to a Laravel-compatible host such as WhoGoHost. Configure production MySQL credentials, `APP_URL` (the public API origin), `NEXT_PUBLIC_API_URL`, `FRONTEND_URL`, mail, storage, and payment settings in the host's environment configuration. Run `php artisan storage:link` on the backend host so uploaded files are reachable at `/storage/...`. Run only pending migrations with `php artisan migrate --force`; never use `migrate:fresh`, `migrate:refresh`, or `db:wipe` on production data. Back up the database and uploaded files before deployments, and ensure the host preserves Laravel's `storage/app/public` uploads.
+Deploy `frontend/` as the Vercel project root and `backend/` to a Laravel-compatible host such as WhoGoHost. Configure production MySQL credentials, `APP_URL` (the public API origin), `NEXT_PUBLIC_API_URL`, `FRONTEND_URL`, `MAIL_MAILER=resend`, `RESEND_KEY`, `MAIL_FROM_ADDRESS` (on a verified Resend domain), mail, storage, and payment settings in the host's environment configuration. Run `php artisan storage:link` on the backend host so uploaded files are reachable at `/storage/...`. Run only pending migrations with `php artisan migrate --force`; never use `migrate:fresh`, `migrate:refresh`, or `db:wipe` on production data. Back up the database and uploaded files before deployments, and ensure the host preserves Laravel's `storage/app/public` uploads.
 
 After deploying the seeders, run them from `backend/` on production:
 
@@ -66,6 +77,7 @@ After deploying the seeders, run them from `backend/` on production:
 php artisan db:seed --class='Database\Seeders\CategoryDescriptionsSeeder' --force
 php artisan db:seed --class='Database\Seeders\CollectionDescriptionsSeeder' --force
 php artisan db:seed --class='Database\Seeders\ProductDescriptionsSeeder' --force
+php artisan db:seed --class='Database\Seeders\PageContentSeeder' --force
 ```
 
 Automated tests intentionally use an isolated in-memory SQLite database; this does not change the application's MySQL runtime configuration.

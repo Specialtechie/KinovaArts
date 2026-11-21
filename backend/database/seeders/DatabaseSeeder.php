@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
         $this->call(CategoryDescriptionsSeeder::class);
         $this->call(CollectionDescriptionsSeeder::class);
         $this->call(ProductDescriptionsSeeder::class);
+        $this->call(PageContentSeeder::class);
 
         $email = config('services.local_admin.email');
         $password = config('services.local_admin.password');

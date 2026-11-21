@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import ContactForm from '@/components/ContactForm';
 import { api, catalog } from '@/lib/api';
 
 type Props = { params: Promise<{ slug: string }> };
@@ -18,6 +19,7 @@ export default async function CmsPage({ params }: Props) {
       <h1 className="section-title mb-6">{page.title}</h1>
       {/* Page content is plain text: line breaks are kept, markup is never executed. */}
       <div className="whitespace-pre-line leading-relaxed text-ink/80">{page.content}</div>
+      {slug === 'contact' && <ContactForm />}
     </div>
   );
 }

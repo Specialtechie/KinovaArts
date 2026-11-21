@@ -1,7 +1,11 @@
 import type { Metadata } from 'next';
+import { cookies, headers } from 'next/headers';
+import countryToCurrency from 'country-to-currency';
 import { Fraunces, IBM_Plex_Mono, Work_Sans } from 'next/font/google';
 import './globals.css';
+import { api } from '@/lib/api';
 import Providers from '@/components/Providers';
+import type { ExchangeRates } from '@/components/CurrencyProvider';
 import Chrome from '@/components/Chrome';
 import Footer from '@/components/Footer';
 
@@ -17,11 +21,23 @@ export const metadata: Metadata = {
   description: 'A curated destination for hand-made African art, furniture, and craft.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const [requestHeaders, cookieStore] = await Promise.all([headers(), cookies()]);
+  const country = requestHeaders.get('x-vercel-ip-country')?.toUpperCase() ?? '';
+  const detectedCurrency = Object.prototype.hasOwnProperty.call(countryToCurrency, country)
+    ? countryToCurrency[country as keyof typeof countryToCurrency]
+    : 'NGN';
+  const savedCurrency = cookieStore.get('ka_currency')?.value?.toUpperCase();
+  const initialCurrency = savedCurrency && /^[A-Z]{3}$/.test(savedCurrency)
+    ? savedCurrency
+    : detectedCurrency;
+  const ratesResponse = await api<ExchangeRates>('/currency-rates', { revalidate: 86400 });
+  const initialRates = ratesResponse.ok ? ratesResponse.data : null;
+
   return (
     <html lang="en" className={`${fraunces.variable} ${work.variable} ${plex.variable}`}>
       <body>
-        <Providers>
+        <Providers initialCurrency={initialCurrency} initialRates={initialRates}>
           <Chrome footer={<Footer />}>{children}</Chrome>
         </Providers>
       </body>

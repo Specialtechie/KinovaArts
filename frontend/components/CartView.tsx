@@ -3,12 +3,15 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { call, getCoupon, setCoupon } from '@/lib/client';
-import { ngn, usd } from '@/lib/format';
+import { ngn } from '@/lib/format';
 import { useAuth, useCart } from './store';
+import CurrencyPrice from './CurrencyPrice';
+import { useCurrency } from './CurrencyProvider';
 
 export default function CartView() {
   const { items, ready, setQty, remove } = useCart();
   const { user, openAuth } = useAuth();
+  const { currency } = useCurrency();
   const [quote, setQuote] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [code, setCode] = useState('');
@@ -93,7 +96,7 @@ export default function CartView() {
             </Link>
             <div className="flex flex-1 flex-col gap-1">
               <Link href={`/products/${line.slug}`} className="font-display font-semibold leading-tight">{line.name}</Link>
-              <span className="text-sm text-ink/60">{usd(line.price)} each</span>
+              <CurrencyPrice amount={line.price} className="text-sm text-ink/60" /> each
               <div className="mt-auto flex items-center gap-3 pt-2">
                 <div className="flex items-center rounded border border-line">
                   <button type="button" className="px-3 py-1" aria-label="Decrease" onClick={() => setQty(line.product_id, line.quantity - 1)}>−</button>
@@ -111,7 +114,7 @@ export default function CartView() {
                 <button type="button" onClick={() => remove(line.product_id)} className="text-xs underline">Remove</button>
               </div>
             </div>
-            <div className="font-semibold">{usd(line.line_total)}</div>
+            <CurrencyPrice amount={line.line_total} className="font-semibold" />
           </div>
         ))}
         {!quote && loading && <p className="text-ink/60">Pricing your bag…</p>}
@@ -137,15 +140,15 @@ export default function CartView() {
 
         {quote && (
           <div className="mt-4 flex flex-col gap-1 text-sm">
-            <div className="flex justify-between"><span>Subtotal</span><span>{usd(quote.subtotal)}</span></div>
+            <div className="flex justify-between"><span>Subtotal</span><CurrencyPrice amount={quote.subtotal} /></div>
             {quote.discount > 0 && (
-              <div className="flex justify-between text-green"><span>Discount</span><span>-{usd(quote.discount)}</span></div>
+              <div className="flex justify-between text-green"><span>Discount</span><span>-<CurrencyPrice amount={quote.discount} /></span></div>
             )}
             <div className="mt-1 flex justify-between border-t border-line pt-2 text-base font-semibold">
-              <span>Total</span><span>{usd(quote.total)}</span>
+              <span>Total</span><CurrencyPrice amount={quote.total} />
             </div>
             <p className="mt-2 text-xs text-ink/60">
-              Prices are in USD. Payment is processed in Nigerian Naira (about {ngn(quote.ngn_total)}), including for international cards.
+              Prices are estimates in {currency}. Paystack currently charges in Nigerian Naira ({ngn(quote.ngn_total)}), including for international cards.
             </p>
           </div>
         )}

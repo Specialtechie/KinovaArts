@@ -3,11 +3,14 @@
 import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 import { call, firstError, getCoupon } from '@/lib/client';
-import { ngn, usd } from '@/lib/format';
+import { ngn } from '@/lib/format';
 import { useCart } from './store';
+import CurrencyPrice from './CurrencyPrice';
+import { useCurrency } from './CurrencyProvider';
 
 export default function CheckoutForm({ defaultName }: { defaultName: string }) {
   const { items, ready } = useCart();
+  const { currency } = useCurrency();
   const [quote, setQuote] = useState<any>(null);
   const [form, setForm] = useState({
     name: defaultName,
@@ -108,17 +111,17 @@ export default function CheckoutForm({ defaultName }: { defaultName: string }) {
             {quote.lines.map((l: any) => (
               <div key={l.product_id} className="flex justify-between gap-3">
                 <span>{l.name} × {l.quantity}</span>
-                <span>{usd(l.line_total)}</span>
+                <CurrencyPrice amount={l.line_total} />
               </div>
             ))}
             {quote.discount > 0 && (
-              <div className="flex justify-between text-green"><span>Discount</span><span>-{usd(quote.discount)}</span></div>
+              <div className="flex justify-between text-green"><span>Discount</span><span>-<CurrencyPrice amount={quote.discount} /></span></div>
             )}
             <div className="mt-2 flex justify-between border-t border-line pt-2 text-base font-semibold">
-              <span>Total</span><span>{usd(quote.total)}</span>
+              <span>Total ({currency})</span><CurrencyPrice amount={quote.total} />
             </div>
             <p className="mt-3 rounded border border-line bg-parchment p-3 text-xs">
-              You&apos;ll be charged <strong>{ngn(quote.ngn_total)}</strong> in Nigerian Naira on Paystack&apos;s secure page, including for international cards.
+              Display prices are estimates in {currency}. You&apos;ll be charged <strong>{ngn(quote.ngn_total)}</strong> in Nigerian Naira on Paystack&apos;s secure page.
             </p>
             {quote.issues?.length > 0 && <p className="mt-2 text-xs text-clay">{quote.issues[0]} Update your bag before paying.</p>}
           </div>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth, useCart } from './store';
+import CurrencySelector from './CurrencySelector';
 
 export default function Header() {
   const { user, openAuth, setUser } = useAuth();
@@ -74,6 +75,7 @@ export default function Header() {
 
         {/* Desktop right-side links */}
         <div className="hidden items-center gap-3 md:flex">
+          <CurrencySelector />
           {user && <Link href="/account/wishlist" className="text-sm font-semibold hover:opacity-70">Wishlist</Link>}
           {user?.is_admin && <Link href="/admin" className="text-sm font-semibold text-clay hover:opacity-70">Admin</Link>}
           <Link href="/cart" className="btn-primary">
@@ -141,6 +143,9 @@ export default function Header() {
       {/* Mobile menu overlay (right) */}
       {panel === 'menu' && (
         <div className="absolute right-0 top-full z-40 w-56 rounded-md border border-line bg-parchment p-3 shadow-soft md:hidden">
+          <div className="px-3 py-2">
+            <CurrencySelector />
+          </div>
           <nav className="flex flex-col gap-1">
             <Link href="/products" className={mobileLink}>Shop</Link>
             <Link href="/collections" className={mobileLink}>Collections</Link>
