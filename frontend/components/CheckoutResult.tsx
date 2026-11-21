@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { call } from '@/lib/client';
-import { usd } from '@/lib/format';
+import { money, usd } from '@/lib/format';
 import { useAuth, useCart } from './store';
 
 type State =
@@ -116,7 +116,9 @@ export default function CheckoutResult() {
   return (
     <div>
       <p className="text-ink/70">
-        Order <strong>{d.order_number}</strong> is confirmed ({usd(d.total)}). A confirmation email is on its way.
+        Order <strong>{d.order_number}</strong> is confirmed ({d.custom_order_payment
+          ? money(d.custom_order_payment.amount, d.custom_order_payment.currency)
+          : usd(d.total)}). A confirmation email is on its way.
       </p>
       <div className="mt-6 flex flex-wrap gap-3">
         {d.custom_order_request_id ? (

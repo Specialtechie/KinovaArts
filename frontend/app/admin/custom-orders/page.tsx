@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageTitle } from '@/components/admin/ui';
 import { adminGet } from '@/lib/admin';
-import { dateLabel, one, usd } from '@/lib/format';
+import { dateLabel, money, one } from '@/lib/format';
 
 export const metadata: Metadata = { title: 'Custom orders' };
 
@@ -56,8 +56,8 @@ export default async function CustomOrdersAdmin({ searchParams }: { searchParams
                   <div className="text-xs text-ink/50">{r.email}</div>
                 </td>
                 <td className="p-3">{r.product?.name ?? '—'}</td>
-                <td className="p-3">{r.budget_range ?? '—'}</td>
-                <td className="p-3">{r.quoted_price ? usd(r.quoted_price) : '—'}</td>
+                <td className="p-3">{r.budget_range ? `${r.budget_range} ${r.budget_currency || 'USD'}` : '—'}</td>
+                <td className="p-3">{r.quoted_price ? money(r.quoted_price, r.quoted_currency || 'USD') : '—'}</td>
                 <td className="p-3"><span className="pill capitalize">{r.status}</span></td>
                 <td className="p-3 text-right"><Link href={`/admin/custom-orders/${r.id}`} className="underline">Open</Link></td>
               </tr>

@@ -40,14 +40,20 @@ class CustomOrderController extends Controller
         $data = $request->validate([
             'status' => 'required|in:pending,reviewing,quoted,accepted,declined,completed',
             'quoted_price' => 'nullable|numeric|min:0',
+            'quoted_currency' => ['sometimes', 'required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
             'admin_notes' => 'nullable|string',
         ]);
 
         $statusChanged = $customOrder->status !== $data['status'];
+        $quoteChanged = (float) ($data['quoted_price'] ?? $customOrder->quoted_price) !== (float) $customOrder->quoted_price
+            || ($data['quoted_currency'] ?? $customOrder->quoted_currency ?? 'USD') !== ($customOrder->quoted_currency ?? 'USD');
 
         $customOrder->update($data);
 
-        if ($statusChanged && in_array($data['status'], ['quoted', 'declined', 'completed'], true)) {
+        if (
+            ($statusChanged && in_array($data['status'], ['quoted', 'declined', 'completed'], true))
+            || ($data['status'] === 'quoted' && $quoteChanged)
+        ) {
             try {
                 Mail::to($customOrder->email)->send(new CustomOrderStatusUpdatedMail($customOrder->fresh()));
             } catch (\Throwable $e) {

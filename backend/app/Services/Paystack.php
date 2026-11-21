@@ -22,14 +22,37 @@ class Paystack
     public function initialize(string $email, float $usdAmount, string $reference, array $metadata = []): string
     {
         $amountInSubunit = (int) round($usdAmount * self::rate() * 100);
+        $currency = config('services.paystack.currency', 'NGN');
 
+        return $this->initializeTransaction($email, $amountInSubunit, $currency, $reference, $metadata);
+    }
+
+    /** Starts a transaction using an amount already converted to NGN. */
+    public function initializeInNgn(string $email, float $ngnAmount, string $reference, array $metadata = []): string
+    {
+        return $this->initializeTransaction(
+            $email,
+            (int) round($ngnAmount * 100),
+            'NGN',
+            $reference,
+            $metadata,
+        );
+    }
+
+    private function initializeTransaction(
+        string $email,
+        int $amountInSubunit,
+        string $currency,
+        string $reference,
+        array $metadata,
+    ): string {
         try {
             $response = Http::withToken(config('services.paystack.secret'))
                 ->timeout(15)
                 ->post('https://api.paystack.co/transaction/initialize', [
                     'email' => $email,
                     'amount' => $amountInSubunit,
-                    'currency' => config('services.paystack.currency', 'NGN'),
+                    'currency' => $currency,
                     'reference' => $reference,
                     'callback_url' => self::frontendUrl().'/checkout/success',
                     'metadata' => $metadata,

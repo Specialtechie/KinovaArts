@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { usd } from '@/lib/format';
+import { money } from '@/lib/format';
 import { authed } from '@/lib/session';
 
 export const metadata: Metadata = { title: 'Custom order' };
@@ -8,13 +8,14 @@ export const metadata: Metadata = { title: 'Custom order' };
 export default async function CustomOrderDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const r = await authed(`/account/custom-orders/${id}`, `/account/custom-orders/${id}`);
+  const quoteCurrency = r.quoted_currency || 'USD';
 
   const prefs: [string, string | null][] = [
     ['Category', r.category_preference],
     ['Material', r.material_preference],
     ['Color', r.color_preference],
     ['Dimensions', r.dimensions],
-    ['Budget', r.budget_range],
+    ['Budget', r.budget_range ? `${r.budget_range} ${r.budget_currency || 'USD'}` : null],
     ['Timeline', r.desired_timeline],
   ];
 
@@ -55,9 +56,9 @@ export default async function CustomOrderDetail({ params }: { params: Promise<{ 
         <div className="mt-6 rounded-md border border-line bg-parchment p-5">
           <div className="font-display font-semibold">Quote ready: paid in two parts</div>
           <p className="mt-1 text-sm text-ink/70">
-            Total <strong>{usd(r.quoted_price)}</strong>: 70% deposit now, the remaining 30% due before delivery.
+            Total <strong>{money(r.quoted_price, quoteCurrency)}</strong>: 70% deposit now, the remaining 30% due before delivery.
           </p>
-          <p className="mt-3 text-lg font-semibold">Deposit due now: {usd(r.deposit_amount)}</p>
+          <p className="mt-3 text-lg font-semibold">Deposit due now: {money(r.deposit_amount, quoteCurrency)}</p>
           <Link href={`/account/custom-orders/${r.id}/pay/deposit`} className="btn-primary mt-3">Pay deposit</Link>
         </div>
       )}
@@ -65,7 +66,7 @@ export default async function CustomOrderDetail({ params }: { params: Promise<{ 
       {r.next_payment === 'balance' && (
         <div className="mt-6 rounded-md border border-line bg-parchment p-5">
           <div className="font-display font-semibold">Your piece is ready</div>
-          <p className="mt-3 text-lg font-semibold">Balance due before delivery: {usd(r.balance_amount)}</p>
+          <p className="mt-3 text-lg font-semibold">Balance due before delivery: {money(r.balance_amount, quoteCurrency)}</p>
           <Link href={`/account/custom-orders/${r.id}/pay/balance`} className="btn-primary mt-3">Pay balance</Link>
         </div>
       )}
@@ -73,7 +74,7 @@ export default async function CustomOrderDetail({ params }: { params: Promise<{ 
       {r.next_payment === 'full' && (
         <div className="mt-6 rounded-md border border-line bg-parchment p-5">
           <div className="font-display font-semibold">Quote ready</div>
-          <p className="mt-1 text-2xl font-semibold">{usd(r.quoted_price)}</p>
+          <p className="mt-1 text-2xl font-semibold">{money(r.quoted_price, quoteCurrency)}</p>
           <Link href={`/account/custom-orders/${r.id}/pay/full`} className="btn-primary mt-4">Accept &amp; proceed to payment</Link>
         </div>
       )}

@@ -68,7 +68,7 @@ class PaymentFulfilment
         }
 
         try {
-            Mail::to($recipient)->send(new OrderConfirmationMail($order->load('items')));
+            Mail::to($recipient)->send(new OrderConfirmationMail($order->load(['items', 'customOrderRequest'])));
         } catch (\Throwable $e) {
             report($e);
         }

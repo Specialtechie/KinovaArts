@@ -82,6 +82,27 @@ class ExchangeRates
         }
     }
 
+    public function convert(float $amount, string $from, string $to): float
+    {
+        if ($from === $to) {
+            return round($amount, 2);
+        }
+
+        $rates = $this->latest()['rates'];
+        $fromRate = $rates[$from] ?? null;
+        $toRate = $rates[$to] ?? null;
+
+        if (! is_numeric($fromRate) || (float) $fromRate <= 0) {
+            throw new RuntimeException("No exchange rate is available for {$from}.");
+        }
+
+        if (! is_numeric($toRate) || (float) $toRate <= 0) {
+            throw new RuntimeException("No exchange rate is available for {$to}.");
+        }
+
+        return round(($amount / (float) $fromRate) * (float) $toRate, 2);
+    }
+
     private function rate(string $currency): float
     {
         $rate = $this->latest()['rates'][$currency] ?? null;

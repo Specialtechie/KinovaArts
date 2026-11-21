@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { firstError } from '@/lib/client';
 import { useAuth } from './store';
+import { useCurrency } from './CurrencyProvider';
 
 const API = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
@@ -11,8 +12,10 @@ const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 export default function CustomOrderForm({ product }: { product: { id: number; name: string } | null }) {
   const router = useRouter();
   const { user } = useAuth();
+  const { currency, currencies } = useCurrency();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [budgetCurrency, setBudgetCurrency] = useState(currency);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,7 +124,20 @@ export default function CustomOrderForm({ product }: { product: { id: number; na
         </div>
         <div>
           <label className="field-label">Budget range (optional)</label>
-          <input name="budget_range" placeholder="e.g. $500–$1000" className="field-input" />
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <input name="budget_range" placeholder="e.g. 500–1000" className="field-input" />
+            <select
+              name="budget_currency"
+              aria-label="Budget currency"
+              value={budgetCurrency}
+              onChange={(e) => setBudgetCurrency(e.target.value)}
+              className="field-input"
+            >
+              {Array.from(new Set([budgetCurrency, ...currencies])).sort().map((code) => (
+                <option key={code} value={code}>{code}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div>
           <label className="field-label">Desired timeline (optional)</label>

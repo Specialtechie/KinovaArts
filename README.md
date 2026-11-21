@@ -53,7 +53,7 @@ MAIL_FROM_ADDRESS=orders@your-verified-domain.com
 MAIL_FROM_NAME="Kinova Arts"
 ```
 
-Use a sender address on a domain verified with Resend. Keep the API key private and out of source control. Paystack checkout requires a valid test secret in `PAYSTACK_SECRET_KEY`.
+Use a sender address on a domain verified with Resend. Keep the API key private and out of source control. Custom-order budgets and quotes can use any currency returned by the exchange-rate service; Paystack payments are converted to and charged in NGN. Paystack checkout requires a valid test secret in `PAYSTACK_SECRET_KEY`.
 
 ### Frontend
 

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { dateLabel, usd } from '@/lib/format';
+import { dateLabel, money, usd } from '@/lib/format';
 import { authed } from '@/lib/session';
 
 export const metadata: Metadata = { title: 'My orders' };
@@ -27,7 +27,9 @@ export default async function Orders() {
               </div>
               <div className="text-right">
                 <span className="pill pill-active capitalize">{o.status}</span>
-                <div className="mt-1 text-sm font-semibold">{usd(o.total)}</div>
+                <div className="mt-1 text-sm font-semibold">
+                  {o.custom_order_payment ? money(o.custom_order_payment.amount, o.custom_order_payment.currency) : usd(o.total)}
+                </div>
               </div>
             </div>
             {o.items?.length > 0 && (

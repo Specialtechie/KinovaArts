@@ -58,4 +58,18 @@ class Order extends Model
     {
         return $this->user?->email ?? $this->customOrderRequest?->email;
     }
+
+    public function customOrderPayment(): ?array
+    {
+        $customOrder = $this->customOrderRequest;
+
+        if (! $customOrder) {
+            return null;
+        }
+
+        return [
+            'amount' => $customOrder->paymentAmount($this->payment_type ?: 'full'),
+            'currency' => $customOrder->quoted_currency ?: 'USD',
+        ];
+    }
 }

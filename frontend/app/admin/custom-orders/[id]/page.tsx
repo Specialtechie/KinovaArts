@@ -3,7 +3,7 @@ import Link from 'next/link';
 import CustomOrderUpdateForm from '@/components/admin/CustomOrderUpdateForm';
 import { Card, PageTitle } from '@/components/admin/ui';
 import { adminGet } from '@/lib/admin';
-import { dateLabel, usd } from '@/lib/format';
+import { dateLabel, money } from '@/lib/format';
 
 export const metadata: Metadata = { title: 'Custom order' };
 
@@ -16,7 +16,7 @@ export default async function CustomOrderAdmin({ params }: { params: Promise<{ i
     ['Material', r.material_preference],
     ['Color', r.color_preference],
     ['Dimensions', r.dimensions],
-    ['Budget', r.budget_range],
+    ['Budget', r.budget_range ? `${r.budget_range} ${r.budget_currency || 'USD'}` : null],
     ['Timeline', r.desired_timeline],
   ];
 
@@ -61,8 +61,8 @@ export default async function CustomOrderAdmin({ params }: { params: Promise<{ i
           <Card title="Payments">
             {r.quoted_price ? (
               <p className="mb-3 text-sm">
-                Quote {usd(r.quoted_price)}
-                {r.requires_installment && <> · deposit {usd(r.deposit_amount)} ({r.deposit_paid ? 'paid' : 'due'}) · balance {usd(r.balance_amount)} ({r.balance_paid ? 'paid' : 'due'})</>}
+                Quote {money(r.quoted_price, r.quoted_currency || 'USD')}
+                {r.requires_installment && <> · deposit {money(r.deposit_amount, r.quoted_currency || 'USD')} ({r.deposit_paid ? 'paid' : 'due'}) · balance {money(r.balance_amount, r.quoted_currency || 'USD')} ({r.balance_paid ? 'paid' : 'due'})</>}
                 {r.fully_paid && <span className="ml-2 font-semibold text-green">Fully paid</span>}
               </p>
             ) : (
@@ -74,7 +74,14 @@ export default async function CustomOrderAdmin({ params }: { params: Promise<{ i
                   <li key={o.id} className="flex items-center justify-between py-2">
                     <Link href={`/admin/orders/${o.id}`} className="underline">{o.order_number}</Link>
                     <span className="capitalize">{o.payment_type} · {o.status}</span>
-                    <span>{usd(o.total)}</span>
+                    <span>{money(
+                      o.payment_type === 'deposit'
+                        ? r.deposit_amount
+                        : o.payment_type === 'balance'
+                          ? r.balance_amount
+                          : r.quoted_price,
+                      r.quoted_currency || 'USD',
+                    )}</span>
                   </li>
                 ))}
               </ul>

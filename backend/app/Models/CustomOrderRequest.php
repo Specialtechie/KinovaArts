@@ -20,12 +20,14 @@ class CustomOrderRequest extends Model
         'color_preference',
         'dimensions',
         'budget_range',
+        'budget_currency',
         'desired_timeline',
         'reference_image_1',
         'reference_image_2',
         'reference_image_3',
         'status',
         'quoted_price',
+        'quoted_currency',
         'admin_notes',
     ];
 
@@ -71,6 +73,15 @@ class CustomOrderRequest extends Model
     public function balanceAmount(): float
     {
         return round((float) $this->quoted_price - $this->depositAmount(), 2);
+    }
+
+    public function paymentAmount(string $type): float
+    {
+        return match ($type) {
+            'deposit' => $this->depositAmount(),
+            'balance' => $this->balanceAmount(),
+            default => (float) $this->quoted_price,
+        };
     }
 
     public function isDepositPaid(): bool

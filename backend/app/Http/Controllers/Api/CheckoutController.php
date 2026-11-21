@@ -126,6 +126,7 @@ class CheckoutController extends Controller
             'total' => $order->total,
             'payment_type' => $order->payment_type ?? 'full',
             'custom_order_request_id' => $order->custom_order_request_id,
+            'custom_order_payment' => $order->customOrderPayment(),
         ]);
     }
 }

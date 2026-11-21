@@ -1,6 +1,9 @@
 export const usd = (n: number | string | null | undefined) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(n) || 0);
 
+export const money = (n: number | string | null | undefined, currency: string) =>
+  new Intl.NumberFormat('en', { style: 'currency', currency, currencyDisplay: 'code' }).format(Number(n) || 0);
+
 export const ngn = (n: number | string | null | undefined) =>
   '₦' + new Intl.NumberFormat('en-NG', { maximumFractionDigits: 2 }).format(Number(n) || 0);
 

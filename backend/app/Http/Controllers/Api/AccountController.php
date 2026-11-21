@@ -16,16 +16,26 @@ class AccountController extends Controller
 
     public function orders(Request $request)
     {
-        return response()->json(
-            $request->user()->orders()->with('items')->latest()->get()
-        );
+        $orders = $request->user()->orders()
+            ->with(['items', 'customOrderRequest'])
+            ->latest()
+            ->get()
+            ->map(fn (Order $order) => array_merge($order->toArray(), [
+                'custom_order_payment' => $order->customOrderPayment(),
+            ]));
+
+        return response()->json($orders);
     }
 
     public function order(Request $request, Order $order)
     {
         abort_unless($order->user_id === $request->user()->id, 404);
 
-        return response()->json($order->load('items'));
+        $order->load(['items', 'customOrderRequest']);
+
+        return response()->json(array_merge($order->toArray(), [
+            'custom_order_payment' => $order->customOrderPayment(),
+        ]));
     }
 
     public function wishlist(Request $request)

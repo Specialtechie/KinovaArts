@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\CustomOrderReceivedMail;
 use App\Models\CustomOrderRequest;
 use App\Models\Order;
+use App\Services\ExchangeRates;
 use App\Services\PaymentFulfilment;
 use App\Services\Paystack;
 use Illuminate\Http\Request;
@@ -29,6 +30,7 @@ class CustomOrderController extends Controller
             'color_preference' => 'nullable|string|max:255',
             'dimensions' => 'nullable|string|max:255',
             'budget_range' => 'nullable|string|max:255',
+            'budget_currency' => ['nullable', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
             'desired_timeline' => 'nullable|string|max:255',
             'images' => 'nullable|array|max:3',
             'images.*' => 'image|max:8192',
@@ -51,6 +53,7 @@ class CustomOrderController extends Controller
             'color_preference' => $data['color_preference'] ?? null,
             'dimensions' => $data['dimensions'] ?? null,
             'budget_range' => $data['budget_range'] ?? null,
+            'budget_currency' => $data['budget_currency'] ?? 'USD',
             'desired_timeline' => $data['desired_timeline'] ?? null,
             'reference_image_1' => $urls[0] ?? null,
             'reference_image_2' => $urls[1] ?? null,
@@ -91,11 +94,21 @@ class CustomOrderController extends Controller
         return response()->json($this->present($customOrder->load(['product', 'orders'])));
     }
 
-    public function pay(Request $request, CustomOrderRequest $customOrder, string $type, Paystack $paystack)
+    public function pay(Request $request, CustomOrderRequest $customOrder, string $type, Paystack $paystack, ExchangeRates $exchangeRates)
     {
         $this->authorizeOwner($request, $customOrder);
 
         $amount = $this->amountFor($customOrder, $type);
+        $quotedCurrency = $customOrder->quoted_currency ?: 'USD';
+
+        try {
+            $amountInUsd = $exchangeRates->convert($amount, $quotedCurrency, 'USD');
+            $amountInNgn = $exchangeRates->convert($amount, $quotedCurrency, 'NGN');
+        } catch (RuntimeException $exception) {
+            report($exception);
+
+            return response()->json(['message' => 'The quote currency cannot be converted right now. Please try again later.'], 503);
+        }
 
         $data = $request->validate([
             'name' => 'required|string|max:255',
@@ -119,8 +132,8 @@ class CustomOrderController extends Controller
             'custom_order_request_id' => $customOrder->id,
             'payment_type' => $type,
             'status' => 'pending',
-            'subtotal' => $amount,
-            'total' => $amount,
+            'subtotal' => $amountInUsd,
+            'total' => $amountInUsd,
             'shipping_name' => $data['name'],
             'shipping_line1' => $data['line1'],
             'shipping_line2' => $data['line2'] ?? null,
@@ -131,7 +144,7 @@ class CustomOrderController extends Controller
         ]);
 
         try {
-            $url = $paystack->initialize($request->user()->email, $amount, $order->order_number, [
+            $url = $paystack->initializeInNgn($request->user()->email, $amountInNgn, $order->order_number, [
                 'order_id' => $order->id,
                 'custom_order_request_id' => $customOrder->id,
             ]);
@@ -213,10 +226,12 @@ class CustomOrderController extends Controller
             'color_preference' => $r->color_preference,
             'dimensions' => $r->dimensions,
             'budget_range' => $r->budget_range,
+            'budget_currency' => $r->budget_currency ?: 'USD',
             'desired_timeline' => $r->desired_timeline,
             'reference_images' => array_values($r->referenceImages()),
             'product' => $r->product ? ['id' => $r->product->id, 'name' => $r->product->name, 'slug' => $r->product->slug] : null,
             'quoted_price' => $r->quoted_price,
+            'quoted_currency' => $r->quoted_currency ?: 'USD',
             'admin_notes' => $r->admin_notes,
             'requires_installment' => $r->requiresInstallment(),
             'deposit_amount' => $r->requiresInstallment() ? $r->depositAmount() : null,

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { dateLabel, usd } from '@/lib/format';
+import { dateLabel, money, usd } from '@/lib/format';
 import { authed } from '@/lib/session';
 
 export const metadata: Metadata = { title: 'Order details' };
@@ -92,14 +92,23 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       </div>
 
       <div className="mt-8 flex flex-col gap-1 text-sm">
-        <div className="flex justify-between"><span>Subtotal</span><span>{usd(o.subtotal)}</span></div>
-        {Number(o.discount) > 0 && (
-          <div className="flex justify-between text-green">
-            <span>Discount{o.coupon_code ? ` (${o.coupon_code})` : ''}</span><span>-{usd(o.discount)}</span>
+        {o.custom_order_payment ? (
+          <div className="flex justify-between text-base font-semibold">
+            <span>{paymentLabel || 'Payment'}</span>
+            <span>{money(o.custom_order_payment.amount, o.custom_order_payment.currency)}</span>
           </div>
+        ) : (
+          <>
+            <div className="flex justify-between"><span>Subtotal</span><span>{usd(o.subtotal)}</span></div>
+            {Number(o.discount) > 0 && (
+              <div className="flex justify-between text-green">
+                <span>Discount{o.coupon_code ? ` (${o.coupon_code})` : ''}</span><span>-{usd(o.discount)}</span>
+              </div>
+            )}
+            {Number(o.shipping_fee) > 0 && <div className="flex justify-between"><span>Shipping</span><span>{usd(o.shipping_fee)}</span></div>}
+            <div className="flex justify-between text-base font-semibold"><span>Total</span><span>{usd(o.total)}</span></div>
+          </>
         )}
-        {Number(o.shipping_fee) > 0 && <div className="flex justify-between"><span>Shipping</span><span>{usd(o.shipping_fee)}</span></div>}
-        <div className="flex justify-between text-base font-semibold"><span>Total</span><span>{usd(o.total)}</span></div>
       </div>
     </div>
   );

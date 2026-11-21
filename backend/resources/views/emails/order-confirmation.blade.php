@@ -5,6 +5,9 @@ Thank you for your order, {{ $order->shipping_name }}.
 
 **Order number:** {{ $order->order_number }}
 
+@if($order->custom_order_request_id && $order->customOrderRequest)
+**Custom order payment:** {{ $order->customOrderRequest->quoted_currency ?: 'USD' }} {{ number_format($order->customOrderRequest->paymentAmount($order->payment_type ?: 'full'), 2) }}
+@else
 @component('mail::table')
 | Item | Quantity | Price |
 |:-----|---------:|------:|
@@ -14,6 +17,7 @@ Thank you for your order, {{ $order->shipping_name }}.
 @endcomponent
 
 **Total:** ${{ number_format($order->total, 2) }}
+@endif
 
 Thanks,<br>
 {{ config('app.name') }}

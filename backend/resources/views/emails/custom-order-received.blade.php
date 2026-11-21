@@ -23,7 +23,7 @@
 **Dimensions:** {{ $customOrderRequest->dimensions }}
 @endif
 @if($customOrderRequest->budget_range)
-**Budget range:** {{ $customOrderRequest->budget_range }}
+**Budget range:** {{ $customOrderRequest->budget_range }} {{ $customOrderRequest->budget_currency ?: 'USD' }}
 @endif
 @if($customOrderRequest->desired_timeline)
 **Desired timeline:** {{ $customOrderRequest->desired_timeline }}

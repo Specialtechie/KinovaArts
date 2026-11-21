@@ -6,11 +6,13 @@ Hi {{ $customOrderRequest->name }},
 @if($customOrderRequest->status === 'quoted')
 We've reviewed your request and put together a quote:
 
-**Total price:** ${{ number_format($customOrderRequest->quoted_price, 2) }}
+**Total price:** {{ $customOrderRequest->quoted_currency ?: 'USD' }} {{ number_format($customOrderRequest->quoted_price, 2) }}
 
 @if($customOrderRequest->requiresInstallment())
-This can be paid as a 70% deposit now (${{ number_format($customOrderRequest->depositAmount(), 2) }}), with the remaining 30% (${{ number_format($customOrderRequest->balanceAmount(), 2) }}) due before delivery.
+This can be paid as a 70% deposit now ({{ $customOrderRequest->quoted_currency ?: 'USD' }} {{ number_format($customOrderRequest->depositAmount(), 2) }}), with the remaining 30% ({{ $customOrderRequest->quoted_currency ?: 'USD' }} {{ number_format($customOrderRequest->balanceAmount(), 2) }}) due before delivery.
 @endif
+
+Paystack will charge the NGN equivalent. The current estimate and final amount will be shown during checkout.
 
 @component('mail::button', ['url' => rtrim(config('services.frontend.url'), '/').'/account/custom-orders/'.$customOrderRequest->id])
 View quote & proceed to payment
@@ -18,7 +20,7 @@ View quote & proceed to payment
 @elseif($customOrderRequest->status === 'declined')
 Unfortunately we're not able to take this on right now. Feel free to reach out if you'd like to discuss alternatives.
 @elseif($customOrderRequest->status === 'completed')
-Your custom piece is ready! @if($customOrderRequest->requiresInstallment() && ! $customOrderRequest->isBalancePaid()) The remaining balance of ${{ number_format($customOrderRequest->balanceAmount(), 2) }} is now due before delivery. @endif
+Your custom piece is ready! @if($customOrderRequest->requiresInstallment() && ! $customOrderRequest->isBalancePaid()) The remaining balance of {{ $customOrderRequest->quoted_currency ?: 'USD' }} {{ number_format($customOrderRequest->balanceAmount(), 2) }} is now due before delivery. @endif
 
 @component('mail::button', ['url' => rtrim(config('services.frontend.url'), '/').'/account/custom-orders/'.$customOrderRequest->id])
 View your request

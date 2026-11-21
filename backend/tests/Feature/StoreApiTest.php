@@ -6,9 +6,12 @@ use App\Models\User;
 use App\Models\CustomOrderRequest;
 use App\Models\Page;
 use App\Mail\ContactInquiryReceivedMail;
+use App\Mail\CustomOrderStatusUpdatedMail;
 use App\Services\Paystack;
+use App\Services\ExchangeRates;
 use Database\Seeders\PageContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -48,6 +51,120 @@ class StoreApiTest extends TestCase
         $this->getJson('/api/products')
             ->assertOk()
             ->assertJsonStructure(['data', 'current_page', 'per_page', 'total']);
+    }
+
+    public function test_custom_order_budget_currency_is_saved(): void
+    {
+        Mail::fake();
+
+        $response = $this->postJson('/api/custom-orders', [
+            'name' => 'Customer Example',
+            'email' => 'customer@example.test',
+            'description' => 'A hand-carved table made to fit a small dining room.',
+            'budget_range' => '500-750',
+            'budget_currency' => 'GBP',
+        ]);
+
+        $response->assertCreated();
+        $this->assertDatabaseHas('custom_order_requests', [
+            'id' => $response->json('id'),
+            'budget_range' => '500-750',
+            'budget_currency' => 'GBP',
+        ]);
+    }
+
+    public function test_admin_quote_currency_is_saved_and_included_in_the_quote_email(): void
+    {
+        Mail::fake();
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+        $customOrder = CustomOrderRequest::create([
+            'name' => 'Customer Example',
+            'email' => 'customer@example.test',
+            'description' => 'A custom hand-carved table for a dining room.',
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/admin/custom-orders/{$customOrder->id}", [
+                'status' => 'quoted',
+                'quoted_price' => 250,
+                'quoted_currency' => 'GBP',
+            ])
+            ->assertOk()
+            ->assertJsonPath('quoted_currency', 'GBP');
+
+        $this->assertDatabaseHas('custom_order_requests', [
+            'id' => $customOrder->id,
+            'quoted_price' => 250,
+            'quoted_currency' => 'GBP',
+        ]);
+        Mail::assertSent(CustomOrderStatusUpdatedMail::class);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/admin/custom-orders/{$customOrder->id}", [
+                'status' => 'quoted',
+                'quoted_price' => 275,
+                'quoted_currency' => 'EUR',
+            ])
+            ->assertOk()
+            ->assertJsonPath('quoted_currency', 'EUR');
+
+        $this->assertDatabaseHas('custom_order_requests', [
+            'id' => $customOrder->id,
+            'quoted_price' => 275,
+            'quoted_currency' => 'EUR',
+        ]);
+        Mail::assertSentCount(2);
+    }
+
+    public function test_custom_order_quote_in_ngn_is_charged_as_ngn_by_paystack(): void
+    {
+        Cache::flush();
+        config(['services.paystack.secret' => 'test-secret']);
+        Http::fake([
+            'https://open.er-api.com/v6/latest/USD' => Http::response([
+                'result' => 'success',
+                'base_code' => 'USD',
+                'time_last_update_utc' => 'Thu, 20 Nov 2026 00:00:00 +0000',
+                'rates' => ['USD' => 1, 'NGN' => 1350],
+            ]),
+            'https://api.paystack.co/transaction/initialize' => Http::response([
+                'status' => true,
+                'data' => ['authorization_url' => 'https://checkout.example.test/pay'],
+            ]),
+        ]);
+        $user = User::factory()->create();
+        $customOrder = CustomOrderRequest::create([
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'description' => 'A custom hand-carved table for a dining room.',
+            'status' => 'quoted',
+            'quoted_price' => 1350,
+            'quoted_currency' => 'NGN',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/account/custom-orders/{$customOrder->id}/pay/deposit", [
+                'name' => $user->name,
+                'line1' => '1 Example Street',
+                'city' => 'Lagos',
+                'country' => 'Nigeria',
+                'postcode' => '100001',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('authorization_url', 'https://checkout.example.test/pay');
+
+        $this->assertDatabaseHas('orders', [
+            'custom_order_request_id' => $customOrder->id,
+            'payment_type' => 'deposit',
+            'total' => 0.70,
+        ]);
+        Http::assertSent(fn (HttpRequest $request) => (
+            str_contains($request->url(), 'paystack.co/transaction/initialize')
+            && $request['amount'] === 94500
+            && $request['currency'] === 'NGN'
+        ));
     }
 
     public function test_contact_inquiry_is_emailed_to_the_configured_support_inbox(): void
@@ -166,6 +283,7 @@ class StoreApiTest extends TestCase
         $this->getJson('/api/currency-rates')->assertOk();
         Http::assertSentCount(1);
         $this->assertSame(1350.0, Paystack::rate());
+        $this->assertSame(1.0, app(ExchangeRates::class)->convert(1350, 'NGN', 'USD'));
     }
 
     public function test_admin_user_can_access_admin_dashboard(): void
