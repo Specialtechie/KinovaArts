@@ -12,6 +12,10 @@ class ContactInquiryController extends Controller
 {
     public function store(Request $request)
     {
+        if ($request->filled('contact_reference') || $request->filled('company_website')) {
+            return response()->json(['message' => 'Your message has been sent.']);
+        }
+
         $data = $request->validate([
             'type' => 'required|in:enquiry,complaint',
             'name' => 'required|string|max:255',
@@ -19,7 +23,6 @@ class ContactInquiryController extends Controller
             'order_number' => 'nullable|string|max:100',
             'subject' => 'required|string|max:160',
             'message' => 'required|string|min:20|max:5000',
-            'company_website' => 'prohibited',
         ]);
 
         $recipient = config('services.admin_notify_email');

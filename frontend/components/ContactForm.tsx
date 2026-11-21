@@ -15,7 +15,7 @@ type ContactFormData = {
   order_number: string;
   subject: string;
   message: string;
-  company_website: string;
+  contact_reference: string;
 };
 
 const initialForm: ContactFormData = {
@@ -25,7 +25,7 @@ const initialForm: ContactFormData = {
   order_number: '',
   subject: '',
   message: '',
-  company_website: '',
+  contact_reference: '',
 };
 
 export default function ContactForm() {
@@ -138,14 +138,14 @@ export default function ContactForm() {
         </div>
 
         <div className="absolute left-[-9999px]" aria-hidden="true">
-          <label htmlFor="contact-company-website">Leave this field empty</label>
+          <label htmlFor="contact-reference">Leave this field empty</label>
           <input
-            id="contact-company-website"
-            name="company_website"
+            id="contact-reference"
+            name="contact_reference"
             tabIndex={-1}
-            autoComplete="off"
-            value={form.company_website}
-            onChange={update('company_website')}
+            autoComplete="new-password"
+            value={form.contact_reference}
+            onChange={update('contact_reference')}
           />
         </div>
 

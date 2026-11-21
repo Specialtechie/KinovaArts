@@ -62,7 +62,7 @@ class StoreApiTest extends TestCase
             'order_number' => 'KA-TEST-100',
             'subject' => 'An item arrived damaged',
             'message' => 'The wall hanging arrived with visible damage.',
-            'company_website' => '',
+            'contact_reference' => '',
         ])
             ->assertOk()
             ->assertJsonPath('message', 'Your message has been sent.');
@@ -96,10 +96,21 @@ class StoreApiTest extends TestCase
             'email' => 'customer@example.test',
             'subject' => 'A question',
             'message' => 'I would like to know more about this item.',
+            'contact_reference' => 'spam.example',
+        ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Your message has been sent.');
+
+        $this->postJson('/api/contact-inquiries', [
+            'type' => 'enquiry',
+            'name' => 'Customer Example',
+            'email' => 'customer@example.test',
+            'subject' => 'A question',
+            'message' => 'I would like to know more about this item.',
             'company_website' => 'spam.example',
         ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['company_website']);
+            ->assertOk()
+            ->assertJsonPath('message', 'Your message has been sent.');
 
         $this->postJson('/api/contact-inquiries', [
             'type' => 'enquiry',
