@@ -55,6 +55,8 @@ MAIL_FROM_NAME="Kinova Arts"
 
 Use a sender address on a domain verified with Resend. Keep the API key private and out of source control. Custom-order budgets and quotes can use any currency returned by the exchange-rate service; Paystack payments are converted to and charged in NGN. Paystack checkout requires a valid test secret in `PAYSTACK_SECRET_KEY`.
 
+Order status changes and order-conversation messages email the customer (or the admin inbox for customer messages). Customers and admins can exchange text and image updates from the order or custom-order detail page (up to three images, 1 MB each). Admin-set delivery fees for standard orders are collected separately through Paystack; custom-order delivery fees are added to the remaining balance after the shipping address is provided. Mark a custom order `Completed` when the piece is finished; this is before shipment or delivery and enables the final balance.
+
 ### Frontend
 
 In another terminal, from the repository root:

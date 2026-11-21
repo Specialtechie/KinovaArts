@@ -31,7 +31,7 @@ class AccountController extends Controller
     {
         abort_unless($order->user_id === $request->user()->id, 404);
 
-        $order->load(['items', 'customOrderRequest']);
+        $order->load(['items', 'customOrderRequest', 'messages.sender:id,name,is_admin']);
 
         return response()->json(array_merge($order->toArray(), [
             'custom_order_payment' => $order->customOrderPayment(),

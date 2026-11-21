@@ -4,8 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\CustomOrderRequest;
+use App\Models\Order;
 use App\Models\Page;
 use App\Mail\ContactInquiryReceivedMail;
+use App\Mail\OrderDeliveryFeeMail;
+use App\Mail\OrderMessageMail;
+use App\Mail\OrderStatusUpdatedMail;
 use App\Mail\CustomOrderStatusUpdatedMail;
 use App\Services\Paystack;
 use App\Services\ExchangeRates;
@@ -15,6 +19,8 @@ use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class StoreApiTest extends TestCase
@@ -314,5 +320,296 @@ class StoreApiTest extends TestCase
         $this->assertSame(56.0, $request->depositAmount());
         $this->assertSame(24.0, $request->balanceAmount());
         $this->assertFalse((new CustomOrderRequest(['quoted_price' => 0]))->requiresInstallment());
+    }
+
+    public function test_admin_order_status_changes_email_customer_only_when_status_changes(): void
+    {
+        Mail::fake();
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+        $customer = User::factory()->create();
+        $order = $this->createOrder($customer);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/admin/orders/{$order->id}", [
+                'status' => 'processing',
+                'courier' => '',
+                'tracking_number' => '',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'processing');
+
+        Mail::assertSent(OrderStatusUpdatedMail::class, fn (OrderStatusUpdatedMail $mail) => (
+            $mail->hasTo($customer->email)
+            && $mail->order->status === 'processing'
+            && str_contains($mail->render(), 'Processing')
+        ));
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/admin/orders/{$order->id}", [
+                'status' => 'processing',
+                'courier' => '',
+                'tracking_number' => '',
+            ])
+            ->assertOk();
+
+        Mail::assertSentCount(1);
+    }
+
+    public function test_custom_order_completion_requires_details_and_emails_completion_photos(): void
+    {
+        Mail::fake();
+        Storage::fake('public');
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+        $customOrder = CustomOrderRequest::create([
+            'name' => 'Customer Example',
+            'email' => 'customer@example.test',
+            'description' => 'A custom hand-carved table for a dining room.',
+            'status' => 'accepted',
+            'quoted_price' => 100,
+            'quoted_currency' => 'USD',
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/admin/custom-orders/{$customOrder->id}", [
+                'status' => 'completed',
+                'quoted_price' => 100,
+                'quoted_currency' => 'USD',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['completion_details']);
+
+        $this->actingAs($admin, 'sanctum')
+            ->post("/api/admin/custom-orders/{$customOrder->id}", [
+                'status' => 'completed',
+                'quoted_price' => 100,
+                'quoted_currency' => 'USD',
+                'delivery_fee' => 0,
+                'completion_details' => 'The carved table is finished and ready for final payment.',
+                'completion_images' => [UploadedFile::fake()->image('finished.png')],
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'completed')
+            ->assertJsonPath('completion_details', 'The carved table is finished and ready for final payment.')
+            ->assertJsonCount(1, 'completion_images');
+
+        $this->assertCount(1, Storage::disk('public')->allFiles('custom-order-completions'));
+        Mail::assertSent(CustomOrderStatusUpdatedMail::class, fn (CustomOrderStatusUpdatedMail $mail) => (
+            str_contains($mail->render(), 'The carved table is finished and ready for final payment.')
+            && str_contains($mail->render(), 'View completion photo')
+        ));
+    }
+
+    public function test_custom_order_delivery_fee_is_added_to_the_balance_after_address_is_saved(): void
+    {
+        Mail::fake();
+        Cache::flush();
+        config(['services.paystack.secret' => 'test-secret']);
+        Http::fake([
+            'https://open.er-api.com/v6/latest/USD' => Http::response([
+                'result' => 'success',
+                'base_code' => 'USD',
+                'time_last_update_utc' => 'Thu, 20 Nov 2026 00:00:00 +0000',
+                'rates' => ['USD' => 1, 'NGN' => 1350],
+            ]),
+            'https://api.paystack.co/transaction/initialize' => Http::response([
+                'status' => true,
+                'data' => ['authorization_url' => 'https://checkout.example.test/pay'],
+            ]),
+        ]);
+        $customer = User::factory()->create();
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+        $customOrder = CustomOrderRequest::create([
+            'user_id' => $customer->id,
+            'name' => $customer->name,
+            'email' => $customer->email,
+            'description' => 'A custom hand-carved table for a dining room.',
+            'status' => 'quoted',
+            'quoted_price' => 100,
+            'quoted_currency' => 'USD',
+        ]);
+
+        $this->actingAs($customer, 'sanctum')
+            ->postJson("/api/account/custom-orders/{$customOrder->id}/pay/deposit", [
+                'name' => $customer->name,
+                'line1' => '1 Example Street',
+                'city' => 'Lagos',
+                'country' => 'Nigeria',
+                'postcode' => '100001',
+            ])
+            ->assertCreated();
+
+        $depositOrder = Order::where('custom_order_request_id', $customOrder->id)->firstOrFail();
+        $depositOrder->update(['status' => 'paid']);
+        $customOrder->update(['status' => 'accepted']);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/admin/custom-orders/{$customOrder->id}", [
+                'status' => 'accepted',
+                'delivery_fee' => 10,
+            ])
+            ->assertOk()
+            ->assertJsonPath('balance_amount', 40);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/admin/custom-orders/{$customOrder->id}", [
+                'status' => 'completed',
+                'completion_details' => 'Your piece is finished and ready for delivery.',
+            ])
+            ->assertOk();
+
+        $this->actingAs($customer, 'sanctum')
+            ->postJson("/api/account/custom-orders/{$customOrder->id}/pay/balance", [
+                'name' => $customer->name,
+                'line1' => '1 Example Street',
+                'city' => 'Lagos',
+                'country' => 'Nigeria',
+                'postcode' => '100001',
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('orders', [
+            'custom_order_request_id' => $customOrder->id,
+            'payment_type' => 'balance',
+            'total' => 40,
+        ]);
+        Http::assertSent(fn (HttpRequest $request) => (
+            str_contains($request->url(), 'paystack.co/transaction/initialize')
+            && $request['amount'] === 5400000
+            && $request['currency'] === 'NGN'
+        ));
+    }
+
+    public function test_customer_and_admin_can_exchange_order_messages_with_email_notifications(): void
+    {
+        Mail::fake();
+        Storage::fake('public');
+        config(['services.admin_notify_email' => 'support@example.test']);
+        $customer = User::factory()->create();
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+        $otherCustomer = User::factory()->create();
+        $order = $this->createOrder($customer);
+
+        $this->actingAs($customer, 'sanctum')
+            ->postJson("/api/account/orders/{$order->id}/messages", [
+                'body' => 'Could you share a progress update?',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('sender.is_admin', false);
+
+        $this->actingAs($admin, 'sanctum')
+            ->post("/api/admin/orders/{$order->id}/messages", [
+                'body' => 'The order is being prepared.',
+                'images' => [UploadedFile::fake()->image('progress.png')],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('sender.is_admin', true)
+            ->assertJsonCount(1, 'images');
+
+        $this->actingAs($otherCustomer, 'sanctum')
+            ->postJson("/api/account/orders/{$order->id}/messages", ['body' => 'Not my order'])
+            ->assertNotFound();
+
+        $this->assertCount(1, Storage::disk('public')->allFiles('order-messages'));
+        Mail::assertSent(OrderMessageMail::class, 2);
+        Mail::assertSent(OrderMessageMail::class, fn (OrderMessageMail $mail) => (
+            $mail->hasTo($customer->email)
+            && str_contains($mail->render(), 'The order is being prepared.')
+        ));
+        Mail::assertSent(OrderMessageMail::class, fn (OrderMessageMail $mail) => (
+            $mail->hasTo('support@example.test')
+            && str_contains($mail->render(), 'Could you share a progress update?')
+        ));
+    }
+
+    public function test_standard_order_delivery_fee_is_paid_separately_and_applied_once(): void
+    {
+        Mail::fake();
+        Cache::flush();
+        config([
+            'services.paystack.secret' => 'test-secret',
+            'services.admin_notify_email' => 'support@example.test',
+        ]);
+        Http::fake([
+            'https://open.er-api.com/v6/latest/USD' => Http::response([
+                'result' => 'success',
+                'base_code' => 'USD',
+                'time_last_update_utc' => 'Thu, 20 Nov 2026 00:00:00 +0000',
+                'rates' => ['USD' => 1, 'NGN' => 1350, 'GBP' => 0.8],
+            ]),
+            'https://api.paystack.co/transaction/initialize' => Http::response([
+                'status' => true,
+                'data' => ['authorization_url' => 'https://checkout.example.test/delivery-fee'],
+            ]),
+            'https://api.paystack.co/transaction/verify/*' => Http::response([
+                'status' => true,
+                'data' => ['status' => 'success', 'amount' => 1687500, 'currency' => 'NGN'],
+            ]),
+        ]);
+        $customer = User::factory()->create();
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+        $order = $this->createOrder($customer, ['status' => 'paid']);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/admin/orders/{$order->id}", [
+                'status' => 'paid',
+                'courier' => '',
+                'tracking_number' => '',
+                'delivery_fee_amount' => 10,
+                'delivery_fee_currency' => 'GBP',
+            ])
+            ->assertOk()
+            ->assertJsonPath('delivery_fee_status', 'unpaid');
+
+        $this->actingAs($customer, 'sanctum')
+            ->postJson("/api/account/orders/{$order->id}/delivery-fee", [])
+            ->assertCreated()
+            ->assertJsonPath('authorization_url', 'https://checkout.example.test/delivery-fee');
+
+        $reference = Order::findOrFail($order->id)->delivery_fee_reference;
+        $this->actingAs($customer, 'sanctum')
+            ->getJson("/api/checkout/verify?reference={$reference}")
+            ->assertOk()
+            ->assertJsonPath('payment_type', 'delivery_fee')
+            ->assertJsonPath('status', 'paid');
+
+        $this->actingAs($customer, 'sanctum')
+            ->getJson("/api/checkout/verify?reference={$reference}")
+            ->assertOk()
+            ->assertJsonPath('delivery_fee_status', 'paid');
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'delivery_fee_status' => 'paid',
+            'delivery_fee_usd' => 12.5,
+            'total' => 112.5,
+        ]);
+        Http::assertSent(fn (HttpRequest $request) => (
+            str_contains($request->url(), 'paystack.co/transaction/initialize')
+            && $request['amount'] === 1687500
+            && $request['currency'] === 'NGN'
+        ));
+        Mail::assertSent(OrderDeliveryFeeMail::class);
+    }
+
+    private function createOrder(User $customer, array $attributes = []): Order
+    {
+        return Order::create(array_merge([
+            'order_number' => 'KA-TEST-'.strtoupper(fake()->unique()->bothify('??####')),
+            'user_id' => $customer->id,
+            'status' => 'pending',
+            'subtotal' => 100,
+            'discount' => 0,
+            'total' => 100,
+            'shipping_name' => $customer->name,
+            'shipping_line1' => '1 Example Street',
+            'shipping_city' => 'Lagos',
+            'shipping_country' => 'Nigeria',
+            'shipping_postcode' => '100001',
+        ], $attributes));
     }
 }

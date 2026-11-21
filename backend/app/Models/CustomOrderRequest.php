@@ -28,12 +28,26 @@ class CustomOrderRequest extends Model
         'status',
         'quoted_price',
         'quoted_currency',
+        'delivery_fee',
         'admin_notes',
+        'shipping_name',
+        'shipping_line1',
+        'shipping_line2',
+        'shipping_city',
+        'shipping_state',
+        'shipping_country',
+        'shipping_postcode',
+        'completion_details',
+        'completion_images',
     ];
 
     protected function casts(): array
     {
-        return ['quoted_price' => 'decimal:2'];
+        return [
+            'quoted_price' => 'decimal:2',
+            'delivery_fee' => 'decimal:2',
+            'completion_images' => 'array',
+        ];
     }
 
     public function user(): BelongsTo
@@ -51,6 +65,11 @@ class CustomOrderRequest extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function messages(): HasMany
+    {
+        return $this->hasMany(OrderMessage::class)->orderBy('created_at');
+    }
+
     public function referenceImages(): array
     {
         return array_filter([
@@ -65,6 +84,11 @@ class CustomOrderRequest extends Model
         return (float) $this->quoted_price > 0;
     }
 
+    public function totalQuoteAmount(): float
+    {
+        return round((float) $this->quoted_price + (float) $this->delivery_fee, 2);
+    }
+
     public function depositAmount(): float
     {
         return round((float) $this->quoted_price * 0.7, 2);
@@ -72,7 +96,7 @@ class CustomOrderRequest extends Model
 
     public function balanceAmount(): float
     {
-        return round((float) $this->quoted_price - $this->depositAmount(), 2);
+        return round($this->totalQuoteAmount() - $this->depositAmount(), 2);
     }
 
     public function paymentAmount(string $type): float
@@ -80,7 +104,7 @@ class CustomOrderRequest extends Model
         return match ($type) {
             'deposit' => $this->depositAmount(),
             'balance' => $this->balanceAmount(),
-            default => (float) $this->quoted_price,
+            default => $this->totalQuoteAmount(),
         };
     }
 
@@ -98,6 +122,14 @@ class CustomOrderRequest extends Model
     {
         return $this->hasPaidOrderOfType('full')
             || ($this->isDepositPaid() && $this->isBalancePaid());
+    }
+
+    public function hasPendingOrderOfType(string $type): bool
+    {
+        return $this->orders()
+            ->where('payment_type', $type)
+            ->where('status', 'pending')
+            ->exists();
     }
 
     private function hasPaidOrderOfType(string $type): bool

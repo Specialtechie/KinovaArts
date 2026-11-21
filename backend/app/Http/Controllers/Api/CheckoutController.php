@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OrderDeliveryFeeMail;
 use App\Models\Order;
 use App\Services\CartPricing;
 use App\Services\PaymentFulfilment;
 use App\Services\Paystack;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use RuntimeException;
 
 class CheckoutController extends Controller
@@ -101,6 +103,61 @@ class CheckoutController extends Controller
 
         if (! $reference) {
             return response()->json(['message' => 'Missing payment reference.'], 422);
+        }
+
+        $deliveryFeeOrder = Order::where('delivery_fee_reference', $reference)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($deliveryFeeOrder) {
+            if ($deliveryFeeOrder->delivery_fee_status === 'pending') {
+                $paid = $paystack->isPaidForAmount(
+                    $reference,
+                    (int) round((float) $deliveryFeeOrder->delivery_fee_ngn * 100),
+                    'NGN',
+                );
+
+                if ($paid === null) {
+                    return response()->json(['message' => 'Could not reach the payment provider. Please refresh in a moment.'], 502);
+                }
+
+                if ($paid) {
+                    $feePaid = DB::transaction(function () use ($deliveryFeeOrder) {
+                        $locked = Order::lockForUpdate()->find($deliveryFeeOrder->id);
+
+                        if ($locked && $locked->delivery_fee_status === 'pending') {
+                            $locked->update([
+                                'delivery_fee_status' => 'paid',
+                                'delivery_fee_paid_at' => now(),
+                                'total' => round((float) $locked->total + (float) $locked->delivery_fee_usd, 2),
+                            ]);
+
+                            return true;
+                        }
+
+                        return false;
+                    });
+                    $deliveryFeeOrder->refresh();
+
+                    if ($feePaid && $deliveryFeeOrder->recipientEmail()) {
+                        try {
+                            Mail::to($deliveryFeeOrder->recipientEmail())->send(new OrderDeliveryFeeMail($deliveryFeeOrder, true));
+                        } catch (\Throwable $exception) {
+                            report($exception);
+                        }
+                    }
+                }
+            }
+
+            return response()->json([
+                'order_number' => $deliveryFeeOrder->order_number,
+                'order_id' => $deliveryFeeOrder->id,
+                'status' => $deliveryFeeOrder->delivery_fee_status === 'paid' ? 'paid' : 'pending',
+                'payment_type' => 'delivery_fee',
+                'delivery_fee_status' => $deliveryFeeOrder->delivery_fee_status,
+                'delivery_fee_amount' => $deliveryFeeOrder->delivery_fee_amount,
+                'delivery_fee_currency' => $deliveryFeeOrder->delivery_fee_currency,
+            ]);
         }
 
         $order = Order::where('order_number', $reference)

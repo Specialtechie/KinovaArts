@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { money } from '@/lib/format';
 import { authed } from '@/lib/session';
+import OrderConversation from '@/components/OrderConversation';
 
 export const metadata: Metadata = { title: 'Custom order' };
 
@@ -51,12 +52,32 @@ export default async function CustomOrderDetail({ params }: { params: Promise<{ 
         )}
       </div>
 
+      {r.completion_details && (
+        <div className="mt-6 rounded-md border border-line bg-parchment p-5 text-sm">
+          <div className="font-display font-semibold">Your piece is complete</div>
+          <p className="mt-2 whitespace-pre-line">{r.completion_details}</p>
+          {!!r.completion_images?.length && (
+            <div className="mt-4 flex flex-wrap gap-3">
+              {r.completion_images.map((src: string) => (
+                <a key={src} href={src} target="_blank" rel="noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="Your completed custom piece" className="h-28 w-28 rounded object-cover" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Quote and payment */}
       {r.next_payment === 'deposit' && (
         <div className="mt-6 rounded-md border border-line bg-parchment p-5">
           <div className="font-display font-semibold">Quote ready: paid in two parts</div>
           <p className="mt-1 text-sm text-ink/70">
-            Total <strong>{money(r.quoted_price, quoteCurrency)}</strong>: 70% deposit now, the remaining 30% due before delivery.
+            Piece price: <strong>{money(r.quoted_price, quoteCurrency)}</strong>.
+            {Number(r.delivery_fee) > 0
+              ? <> Delivery fee: <strong>{money(r.delivery_fee, quoteCurrency)}</strong>, added to the remaining balance. Total: <strong>{money(r.total_quoted_price, quoteCurrency)}</strong>.</>
+              : <> Delivery fee will be calculated after you provide your address.</>}
           </p>
           <p className="mt-3 text-lg font-semibold">Deposit due now: {money(r.deposit_amount, quoteCurrency)}</p>
           <Link href={`/account/custom-orders/${r.id}/pay/deposit`} className="btn-primary mt-3">Pay deposit</Link>
@@ -66,6 +87,11 @@ export default async function CustomOrderDetail({ params }: { params: Promise<{ 
       {r.next_payment === 'balance' && (
         <div className="mt-6 rounded-md border border-line bg-parchment p-5">
           <div className="font-display font-semibold">Your piece is ready</div>
+          {Number(r.delivery_fee) > 0 && (
+            <p className="mt-2 text-sm text-ink/70">
+              Piece balance: {money(r.quoted_price - r.deposit_amount, quoteCurrency)} · Delivery fee: {money(r.delivery_fee, quoteCurrency)}
+            </p>
+          )}
           <p className="mt-3 text-lg font-semibold">Balance due before delivery: {money(r.balance_amount, quoteCurrency)}</p>
           <Link href={`/account/custom-orders/${r.id}/pay/balance`} className="btn-primary mt-3">Pay balance</Link>
         </div>
@@ -86,6 +112,9 @@ export default async function CustomOrderDetail({ params }: { params: Promise<{ 
       {!r.next_payment && !r.fully_paid && r.requires_installment && r.deposit_paid && (
         <div className="mt-6 rounded-md border border-line bg-panel p-5 text-sm">
           <span className="text-green">Deposit received. Your piece is in progress.</span>{' '}
+          {Number(r.delivery_fee) > 0
+            ? <>Delivery fee {money(r.delivery_fee, quoteCurrency)} will be added to the remaining balance. </>
+            : null}
           We&apos;ll email you when it&apos;s ready and the balance payment link becomes available.
         </div>
       )}
@@ -106,6 +135,9 @@ export default async function CustomOrderDetail({ params }: { params: Promise<{ 
           <p className="mt-1 whitespace-pre-line">{r.admin_notes}</p>
         </div>
       )}
+      <div className="mt-8">
+        <OrderConversation endpoint={`account/custom-orders/${r.id}/messages`} initialMessages={r.messages || []} />
+      </div>
     </div>
   );
 }

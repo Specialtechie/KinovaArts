@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { dateLabel, money, usd } from '@/lib/format';
 import { authed } from '@/lib/session';
+import OrderConversation from '@/components/OrderConversation';
+import PayDeliveryFeeButton from '@/components/PayDeliveryFeeButton';
 
 export const metadata: Metadata = { title: 'Order details' };
 
@@ -105,10 +107,32 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 <span>Discount{o.coupon_code ? ` (${o.coupon_code})` : ''}</span><span>-{usd(o.discount)}</span>
               </div>
             )}
-            {Number(o.shipping_fee) > 0 && <div className="flex justify-between"><span>Shipping</span><span>{usd(o.shipping_fee)}</span></div>}
-            <div className="flex justify-between text-base font-semibold"><span>Total</span><span>{usd(o.total)}</span></div>
+            {Number(o.delivery_fee_amount) > 0 && (
+              <div className="flex justify-between">
+                <span>Delivery fee ({o.delivery_fee_status})</span>
+                <span>{money(o.delivery_fee_amount, o.delivery_fee_currency || 'USD')}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-base font-semibold">
+              <span>{o.delivery_fee_status === 'paid' ? 'Total including delivery' : 'Original order total'}</span>
+              <span>{usd(o.total)}</span>
+            </div>
           </>
         )}
+      </div>
+      {!o.custom_order_request_id
+        && !['cancelled', 'refunded', 'delivered'].includes(o.status)
+        && ['unpaid', 'pending'].includes(o.delivery_fee_status) && (
+        <div className="mt-4 rounded-md border border-line bg-parchment p-4">
+          <p className="mb-3 text-sm">Your delivery fee is paid separately from the original order total.</p>
+          <PayDeliveryFeeButton orderId={o.id} />
+        </div>
+      )}
+      {!o.custom_order_request_id && o.delivery_fee_status === 'paid' && (
+        <p className="mt-4 text-sm text-green">Delivery fee paid.</p>
+      )}
+      <div className="mt-8">
+        <OrderConversation endpoint={`account/orders/${o.id}/messages`} initialMessages={o.messages || []} />
       </div>
     </div>
   );

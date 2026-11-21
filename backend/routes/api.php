@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\ContactInquiryController;
 use App\Http\Controllers\Api\CustomOrderController;
 use App\Http\Controllers\Api\CurrencyRateController;
+use App\Http\Controllers\Api\OrderMessageController;
+use App\Http\Controllers\Api\OrderDeliveryFeeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json(['ok' => true]));
@@ -42,6 +44,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/account/orders', [AccountController::class, 'orders']);
     Route::get('/account/orders/{order}', [AccountController::class, 'order']);
+    Route::post('/account/orders/{order}/messages', [OrderMessageController::class, 'customerOrder']);
+    Route::post('/account/orders/{order}/delivery-fee', [OrderDeliveryFeeController::class, 'pay']);
 
     Route::get('/account/wishlist', [AccountController::class, 'wishlist']);
     Route::post('/account/wishlist', [AccountController::class, 'wishlistStore']);
@@ -51,6 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/account/custom-orders', [CustomOrderController::class, 'mine']);
     Route::get('/account/custom-orders/{customOrder}', [CustomOrderController::class, 'show']);
+    Route::post('/account/custom-orders/{customOrder}/messages', [OrderMessageController::class, 'customerCustomOrder']);
     Route::post('/account/custom-orders/{customOrder}/pay/{type}', [CustomOrderController::class, 'pay'])
         ->where('type', 'full|deposit|balance');
 });
@@ -83,6 +88,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/orders', [Admin\OrderController::class, 'index']);
     Route::get('/orders/{order}', [Admin\OrderController::class, 'show']);
     Route::post('/orders/{order}', [Admin\OrderController::class, 'update']);
+    Route::post('/orders/{order}/messages', [OrderMessageController::class, 'adminOrder']);
 
     Route::get('/coupons', [Admin\CouponController::class, 'index']);
     Route::post('/coupons', [Admin\CouponController::class, 'store']);
@@ -103,6 +109,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/custom-orders', [Admin\CustomOrderController::class, 'index']);
     Route::get('/custom-orders/{customOrder}', [Admin\CustomOrderController::class, 'show']);
     Route::post('/custom-orders/{customOrder}', [Admin\CustomOrderController::class, 'update']);
+    Route::post('/custom-orders/{customOrder}/messages', [OrderMessageController::class, 'adminCustomOrder']);
 
     Route::get('/reviews', [Admin\ReviewController::class, 'index']);
     Route::post('/reviews/{review}/approve', [Admin\ReviewController::class, 'approve']);

@@ -3,15 +3,25 @@
 import { useState, type FormEvent } from 'react';
 import { call, firstError } from '@/lib/client';
 
-export default function CustomOrderPayForm({ id, type, defaultName }: { id: number; type: string; defaultName: string }) {
+export default function CustomOrderPayForm({
+  id,
+  type,
+  defaultName,
+  initialAddress,
+}: {
+  id: number;
+  type: string;
+  defaultName: string;
+  initialAddress?: Record<string, string | null>;
+}) {
   const [form, setForm] = useState({
-    name: defaultName,
-    line1: '',
-    line2: '',
-    city: '',
-    state: '',
-    country: 'Nigeria',
-    postcode: '',
+    name: initialAddress?.shipping_name || defaultName,
+    line1: initialAddress?.shipping_line1 || '',
+    line2: initialAddress?.shipping_line2 || '',
+    city: initialAddress?.shipping_city || '',
+    state: initialAddress?.shipping_state || '',
+    country: initialAddress?.shipping_country || 'Nigeria',
+    postcode: initialAddress?.shipping_postcode || '',
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -81,7 +81,7 @@ class CustomOrderController extends Controller
             ->with(['product', 'orders'])
             ->latest()
             ->get()
-            ->map(fn ($r) => $this->present($r))
+            ->map(fn ($r) => $this->present($r, false))
             ->values();
 
         return response()->json($requests);
@@ -98,7 +98,33 @@ class CustomOrderController extends Controller
     {
         $this->authorizeOwner($request, $customOrder);
 
-        $amount = $this->amountFor($customOrder, $type);
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'line1' => 'required|string|max:255',
+            'line2' => 'nullable|string|max:255',
+            'city' => 'required|string|max:255',
+            'state' => 'nullable|string|max:255',
+            'country' => 'required|string|max:255',
+            'postcode' => 'required|string|max:50',
+        ]);
+
+        if ($customOrder->delivery_fee > 0 && $this->shippingAddressChanged($customOrder, $data)) {
+            return response()->json([
+                'message' => 'Contact us before changing your delivery address because the delivery fee has already been calculated.',
+            ], 422);
+        }
+
+        $customOrder->update([
+            'shipping_name' => $data['name'],
+            'shipping_line1' => $data['line1'],
+            'shipping_line2' => $data['line2'] ?? null,
+            'shipping_city' => $data['city'],
+            'shipping_state' => $data['state'] ?? null,
+            'shipping_country' => $data['country'],
+            'shipping_postcode' => $data['postcode'],
+        ]);
+
+        $amount = $this->amountFor($customOrder->fresh(), $type);
         $quotedCurrency = $customOrder->quoted_currency ?: 'USD';
 
         try {
@@ -109,16 +135,6 @@ class CustomOrderController extends Controller
 
             return response()->json(['message' => 'The quote currency cannot be converted right now. Please try again later.'], 503);
         }
-
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'line1' => 'required|string|max:255',
-            'line2' => 'nullable|string|max:255',
-            'city' => 'required|string|max:255',
-            'state' => 'nullable|string|max:255',
-            'country' => 'required|string|max:255',
-            'postcode' => 'required|string|max:50',
-        ]);
 
         $prefix = match ($type) {
             'deposit' => 'KA-CO-D-',
@@ -177,7 +193,7 @@ class CustomOrderController extends Controller
             abort_if($r->requiresInstallment(), 422, 'This quote is paid as a deposit and a balance.');
             abort_if($r->isFullyPaid(), 422, 'This quote is already paid.');
 
-            return (float) $r->quoted_price;
+            return $r->totalQuoteAmount();
         }
 
         abort_unless($r->requiresInstallment(), 422, 'This quote is not paid in instalments.');
@@ -212,8 +228,12 @@ class CustomOrderController extends Controller
         return (! $r->isBalancePaid() && $r->status === 'completed') ? 'balance' : null;
     }
 
-    private function present(CustomOrderRequest $r): array
+    private function present(CustomOrderRequest $r, bool $includeMessages = true): array
     {
+        if ($includeMessages) {
+            $r->loadMissing('messages.sender:id,name,is_admin');
+        }
+
         return [
             'id' => $r->id,
             'status' => $r->status,
@@ -232,6 +252,18 @@ class CustomOrderController extends Controller
             'product' => $r->product ? ['id' => $r->product->id, 'name' => $r->product->name, 'slug' => $r->product->slug] : null,
             'quoted_price' => $r->quoted_price,
             'quoted_currency' => $r->quoted_currency ?: 'USD',
+            'delivery_fee' => $r->delivery_fee,
+            'total_quoted_price' => $r->totalQuoteAmount(),
+            'shipping_name' => $r->shipping_name,
+            'shipping_line1' => $r->shipping_line1,
+            'shipping_line2' => $r->shipping_line2,
+            'shipping_city' => $r->shipping_city,
+            'shipping_state' => $r->shipping_state,
+            'shipping_country' => $r->shipping_country,
+            'shipping_postcode' => $r->shipping_postcode,
+            'completion_details' => $r->completion_details,
+            'completion_images' => $r->completion_images ?? [],
+            'messages' => $includeMessages ? $r->messages : [],
             'admin_notes' => $r->admin_notes,
             'requires_installment' => $r->requiresInstallment(),
             'deposit_amount' => $r->requiresInstallment() ? $r->depositAmount() : null,
@@ -242,5 +274,24 @@ class CustomOrderController extends Controller
             'next_payment' => $this->nextPayment($r),
             'created_at' => $r->created_at,
         ];
+    }
+
+    private function shippingAddressChanged(CustomOrderRequest $customOrder, array $data): bool
+    {
+        foreach ([
+            'name' => 'shipping_name',
+            'line1' => 'shipping_line1',
+            'line2' => 'shipping_line2',
+            'city' => 'shipping_city',
+            'state' => 'shipping_state',
+            'country' => 'shipping_country',
+            'postcode' => 'shipping_postcode',
+        ] as $input => $column) {
+            if (($data[$input] ?? null) !== ($customOrder->{$column} ?: null)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

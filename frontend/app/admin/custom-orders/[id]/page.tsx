@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import CustomOrderUpdateForm from '@/components/admin/CustomOrderUpdateForm';
 import { Card, PageTitle } from '@/components/admin/ui';
+import OrderConversation from '@/components/OrderConversation';
 import { adminGet } from '@/lib/admin';
 import { dateLabel, money } from '@/lib/format';
 
@@ -58,10 +59,22 @@ export default async function CustomOrderAdmin({ params }: { params: Promise<{ i
             )}
           </Card>
 
+          {r.shipping_line1 && (
+            <Card title="Delivery address">
+              <p className="text-sm leading-relaxed">
+                {r.shipping_name}<br />
+                {r.shipping_line1}{r.shipping_line2 ? `, ${r.shipping_line2}` : ''}<br />
+                {r.shipping_city}{r.shipping_state ? `, ${r.shipping_state}` : ''}, {r.shipping_country} {r.shipping_postcode}
+              </p>
+            </Card>
+          )}
+
           <Card title="Payments">
             {r.quoted_price ? (
               <p className="mb-3 text-sm">
-                Quote {money(r.quoted_price, r.quoted_currency || 'USD')}
+                Piece {money(r.quoted_price, r.quoted_currency || 'USD')}
+                {Number(r.delivery_fee) > 0 && <> · delivery {money(r.delivery_fee, r.quoted_currency || 'USD')}</>}
+                {' '}· total {money(r.total_quoted_price, r.quoted_currency || 'USD')}
                 {r.requires_installment && <> · deposit {money(r.deposit_amount, r.quoted_currency || 'USD')} ({r.deposit_paid ? 'paid' : 'due'}) · balance {money(r.balance_amount, r.quoted_currency || 'USD')} ({r.balance_paid ? 'paid' : 'due'})</>}
                 {r.fully_paid && <span className="ml-2 font-semibold text-green">Fully paid</span>}
               </p>
@@ -90,6 +103,9 @@ export default async function CustomOrderAdmin({ params }: { params: Promise<{ i
         </div>
 
         <CustomOrderUpdateForm request={r} />
+      </div>
+      <div className="mt-6">
+        <OrderConversation endpoint={`admin/custom-orders/${r.id}/messages`} initialMessages={r.messages || []} />
       </div>
     </div>
   );

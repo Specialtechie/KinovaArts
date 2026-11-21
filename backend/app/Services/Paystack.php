@@ -65,7 +65,12 @@ class Paystack
             throw new RuntimeException('Could not start payment. Please try again.');
         }
 
-        return $response->json('data.authorization_url');
+        $authorizationUrl = $response->json('data.authorization_url');
+        if (! is_string($authorizationUrl) || $authorizationUrl === '') {
+            throw new RuntimeException('The payment provider returned an invalid checkout link. Please try again.');
+        }
+
+        return $authorizationUrl;
     }
 
     /** true = paid, false = not paid, null = provider unreachable. */
@@ -80,5 +85,27 @@ class Paystack
         }
 
         return $response->successful() && $response->json('data.status') === 'success';
+    }
+
+    /** true = paid with the expected amount and currency, false = not paid or mismatched, null = provider unreachable. */
+    public function isPaidForAmount(string $reference, int $amountInSubunit, string $currency): ?bool
+    {
+        try {
+            $response = Http::withToken(config('services.paystack.secret'))
+                ->timeout(15)
+                ->get('https://api.paystack.co/transaction/verify/'.urlencode($reference));
+        } catch (ConnectionException $exception) {
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return false;
+        }
+
+        $transaction = $response->json('data');
+
+        return ($transaction['status'] ?? null) === 'success'
+            && (int) ($transaction['amount'] ?? 0) === $amountInSubunit
+            && ($transaction['currency'] ?? null) === $currency;
     }
 }

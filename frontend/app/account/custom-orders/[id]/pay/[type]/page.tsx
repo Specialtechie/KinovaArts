@@ -35,7 +35,7 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
           ? <> Current estimate: <strong>{ngn(ngnEstimate)}</strong>. The final amount is shown on Paystack&apos;s secure page.</>
           : <> The NGN amount will be shown on Paystack&apos;s secure page.</>}
       </p>
-      <CustomOrderPayForm id={r.id} type={type} defaultName={user.name} />
+      <CustomOrderPayForm id={r.id} type={type} defaultName={user.name} initialAddress={r} />
     </div>
   );
 }

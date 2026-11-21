@@ -51,7 +51,7 @@ export default function CheckoutResult() {
       }
 
       // Custom-order payments never come from the bag, so only clear it for normal orders.
-      if (!r.data.custom_order_request_id) clear();
+      if (!r.data.custom_order_request_id && r.data.payment_type !== 'delivery_fee') clear();
       setState({ status: 'paid', data: r.data });
     },
     [reference, clear]
@@ -113,6 +113,21 @@ export default function CheckoutResult() {
   }
 
   const d = state.data;
+  if (d.payment_type === 'delivery_fee') {
+    return (
+      <div>
+        <p className="text-ink/70">
+          Delivery fee for order <strong>{d.order_number}</strong> is confirmed
+          {d.delivery_fee_amount && <> ({money(d.delivery_fee_amount, d.delivery_fee_currency)})</>}. A confirmation email is on its way.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link href={`/account/orders/${d.order_id}`} className="btn-primary">View order</Link>
+          <Link href="/products" className="btn-ghost">Continue browsing</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <p className="text-ink/70">

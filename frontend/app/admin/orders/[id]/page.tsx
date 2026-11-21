@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import OrderUpdateForm from '@/components/admin/OrderUpdateForm';
 import { Card, PageTitle } from '@/components/admin/ui';
+import OrderConversation from '@/components/OrderConversation';
 import { adminGet } from '@/lib/admin';
 import { dateLabel, money, usd } from '@/lib/format';
 
@@ -79,7 +80,16 @@ export default async function OrderAdmin({ params }: { params: Promise<{ id: str
                   {Number(o.discount) > 0 && (
                     <div className="flex justify-between text-green"><span>Discount{o.coupon_code ? ` (${o.coupon_code})` : ''}</span><span>-{usd(o.discount)}</span></div>
                   )}
-                  <div className="flex justify-between text-base font-semibold"><span>Total</span><span>{usd(o.total)}</span></div>
+                  {Number(o.delivery_fee_amount) > 0 && (
+                    <div className="flex justify-between">
+                      <span>Delivery fee ({o.delivery_fee_status})</span>
+                      <span>{money(o.delivery_fee_amount, o.delivery_fee_currency || 'USD')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-base font-semibold">
+                    <span>{o.delivery_fee_status === 'paid' ? 'Total including delivery' : 'Original order total'}</span>
+                    <span>{usd(o.total)}</span>
+                  </div>
                 </>
               )}
               {o.paystack_reference && <div className="mt-2 text-xs text-ink/50">Paystack reference: <span className="font-mono">{o.paystack_reference}</span></div>}
@@ -88,6 +98,9 @@ export default async function OrderAdmin({ params }: { params: Promise<{ id: str
         </div>
 
         <OrderUpdateForm order={o} />
+      </div>
+      <div className="mt-6">
+        <OrderConversation endpoint={`admin/orders/${o.id}/messages`} initialMessages={o.messages || []} />
       </div>
     </div>
   );

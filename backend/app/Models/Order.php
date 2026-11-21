@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
+    protected $hidden = ['delivery_fee_authorization_url'];
+
     protected $fillable = [
         'order_number',
         'paystack_reference',
@@ -28,6 +30,14 @@ class Order extends Model
         'shipping_postcode',
         'courier',
         'tracking_number',
+        'delivery_fee_amount',
+        'delivery_fee_currency',
+        'delivery_fee_usd',
+        'delivery_fee_ngn',
+        'delivery_fee_status',
+        'delivery_fee_reference',
+        'delivery_fee_authorization_url',
+        'delivery_fee_paid_at',
     ];
 
     protected function casts(): array
@@ -36,6 +46,10 @@ class Order extends Model
             'subtotal' => 'decimal:2',
             'discount' => 'decimal:2',
             'total' => 'decimal:2',
+            'delivery_fee_amount' => 'decimal:2',
+            'delivery_fee_usd' => 'decimal:2',
+            'delivery_fee_ngn' => 'decimal:2',
+            'delivery_fee_paid_at' => 'datetime',
         ];
     }
 
@@ -52,6 +66,11 @@ class Order extends Model
     public function customOrderRequest(): BelongsTo
     {
         return $this->belongsTo(CustomOrderRequest::class);
+    }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(OrderMessage::class)->orderBy('created_at');
     }
 
     public function recipientEmail(): ?string
