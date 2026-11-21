@@ -78,9 +78,18 @@ export default function Header() {
           <CurrencySelector />
           {user && <Link href="/account/wishlist" className="text-sm font-semibold hover:opacity-70">Wishlist</Link>}
           {user?.is_admin && <Link href="/admin" className="text-sm font-semibold text-clay hover:opacity-70">Admin</Link>}
-          <Link href="/cart" className="btn-primary">
-            Bag
-            {count > 0 && <span className="ml-1 rounded-full bg-gold px-2 text-xs text-ink">{count}</span>}
+          <Link
+            href="/cart"
+            className="relative rounded-full p-2 text-ink transition-colors hover:bg-panel"
+            aria-label={count > 0 ? `Cart, ${count} items` : 'Cart'}
+          >
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h15l-1.5 9h-13z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6L5 3H2" />
+              <circle cx="9" cy="20" r="1" />
+              <circle cx="18" cy="20" r="1" />
+            </svg>
+            {count > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 rounded-full bg-gold px-1.5 text-xs text-ink">{count}</span>}
           </Link>
           {user ? (
             <>
@@ -94,7 +103,7 @@ export default function Header() {
           )}
         </div>
 
-        {/* Mobile controls: search, bag, menu */}
+        {/* Mobile controls: search, cart, menu */}
         <div className="flex items-center gap-3 md:hidden">
           <button type="button" aria-label="Search" className="p-1" onClick={() => setPanel(panel === 'search' ? null : 'search')}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -102,7 +111,7 @@ export default function Header() {
             </svg>
           </button>
 
-          <Link href="/cart" className="relative p-1" aria-label="Bag">
+          <Link href="/cart" className="relative p-1" aria-label={count > 0 ? `Cart, ${count} items` : 'Cart'}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h15l-1.5 9h-13z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 6L5 3H2" />
