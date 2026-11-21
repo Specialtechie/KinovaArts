@@ -1,11 +1,10 @@
 'use client';
 
-import { useId, useMemo } from 'react';
+import { useId } from 'react';
 import { useCurrency } from './CurrencyProvider';
 
 export default function CurrencySelector() {
   const { currency, currencies, isLoading, isStale, error, selectCurrency } = useCurrency();
-  const currencyNames = useMemo(() => new Intl.DisplayNames(['en'], { type: 'currency' }), []);
   const id = useId();
 
   return (
@@ -17,11 +16,11 @@ export default function CurrencySelector() {
         value={currency}
         disabled={isLoading || currencies.length === 0}
         onChange={(event) => selectCurrency(event.target.value)}
-        className="rounded-full border border-line bg-panel px-3 py-2 text-sm disabled:opacity-60"
+        className="rounded-full border border-line bg-panel px-2 py-1 text-xs disabled:opacity-60"
       >
         {(currencies.length ? currencies : [currency]).map((code) => (
           <option key={code} value={code}>
-            {code} — {currencyNames.of(code) ?? code}
+            {code}
           </option>
         ))}
       </select>
