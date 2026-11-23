@@ -37,7 +37,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="mx-auto mt-8 max-w-6xl border-t border-line pt-6 text-xs">
-        &copy; {new Date().getFullYear()} Kinova Arts. All pieces made to order by credited artisans.
+        &copy; {new Date().getFullYear()} Specialtechie. All pieces made to order by credited artisans.
       </div>
     </footer>
   );
