@@ -61,9 +61,9 @@ export default async function Home() {
       <section
         id="story"
         className="relative overflow-hidden px-6 py-16 text-panel md:px-10"
-        style={{ backgroundColor: '#211C2E', backgroundImage: "url('/images/story-background.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+        style={{ backgroundColor: '#211C2E', backgroundImage: "url('/images/Liveedge1.png')", backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
-        <div className="absolute inset-0 bg-ink/50" />
+        <div className="absolute inset-0 bg-ink/70" />
         <div className="relative mx-auto grid max-w-5xl gap-10 md:grid-cols-2 md:items-center">
           <div>
             <span className="pill border-panel text-panel">Our craft</span>

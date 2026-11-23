@@ -356,6 +356,31 @@ class StoreApiTest extends TestCase
         Mail::assertSentCount(1);
     }
 
+    public function test_terminal_order_statuses_cannot_be_changed_again(): void
+    {
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+        $customer = User::factory()->create();
+
+        foreach (['delivered', 'cancelled', 'refunded'] as $terminalStatus) {
+            $order = $this->createOrder($customer, ['status' => $terminalStatus]);
+
+            $this->actingAs($admin, 'sanctum')
+                ->postJson("/api/admin/orders/{$order->id}", [
+                    'status' => 'processing',
+                    'courier' => '',
+                    'tracking_number' => '',
+                ])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['status']);
+
+            $this->assertDatabaseHas('orders', [
+                'id' => $order->id,
+                'status' => $terminalStatus,
+            ]);
+        }
+    }
+
     public function test_custom_order_completion_requires_details_and_emails_completion_photos(): void
     {
         Mail::fake();

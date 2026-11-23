@@ -7,6 +7,7 @@ import { Card, Field, s } from './ui';
 import { useCurrency } from '../CurrencyProvider';
 
 const STATUSES = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+const TERMINAL_STATUSES = ['delivered', 'cancelled', 'refunded'];
 
 export default function OrderUpdateForm({ order }: { order: any }) {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function OrderUpdateForm({ order }: { order: any }) {
   const [deliveryFee, setDeliveryFee] = useState(s(order.delivery_fee_amount || '0'));
   const [deliveryFeeCurrency, setDeliveryFeeCurrency] = useState(order.delivery_fee_currency || 'USD');
   const { currencies } = useCurrency();
+  const statusLocked = TERMINAL_STATUSES.includes(order.status);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -46,10 +48,16 @@ export default function OrderUpdateForm({ order }: { order: any }) {
     <Card title="Update order">
       <form onSubmit={submit} className="flex flex-col gap-3">
         <Field label="Status">
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="field-input capitalize">
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            disabled={statusLocked}
+            className="field-input capitalize disabled:cursor-not-allowed disabled:opacity-60"
+          >
             {STATUSES.map((st) => <option key={st} value={st}>{st}</option>)}
           </select>
         </Field>
+        {statusLocked && <p className="text-xs text-ink/50">This is a final status and cannot be changed.</p>}
         <Field label="Courier"><input value={courier} onChange={(e) => setCourier(e.target.value)} className="field-input" /></Field>
         <Field label="Tracking number"><input value={tracking} onChange={(e) => setTracking(e.target.value)} className="field-input" /></Field>
         {!order.custom_order_request_id && (

@@ -53,6 +53,16 @@ class OrderController extends Controller
         $deliveryFeeChanged = false;
 
         if (
+            in_array($previous, ['delivered', 'cancelled', 'refunded'], true)
+            && $data['status'] !== $previous
+        ) {
+            return response()->json([
+                'message' => 'Delivered, cancelled, and refunded orders are final and cannot change status.',
+                'errors' => ['status' => ['This order status is final.']],
+            ], 422);
+        }
+
+        if (
             $data['status'] === 'delivered'
             && (float) $order->delivery_fee_amount > 0
             && $order->delivery_fee_status !== 'paid'
