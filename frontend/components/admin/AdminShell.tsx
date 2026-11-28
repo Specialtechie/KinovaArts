@@ -38,7 +38,11 @@ export default function AdminShell({ name, children }: { name: string; children:
       <aside className="border-b border-line bg-indigo-deep text-panel md:min-h-screen md:w-56 md:shrink-0 md:border-b-0">
         <div className="flex items-center justify-between px-5 py-4 md:block">
           <div>
-            <div className="font-display text-lg font-semibold">Kinova Admin</div>
+            <div className="flex items-center gap-2 font-display text-lg font-semibold">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/kinova-secondary-logo.png" alt="" className="h-8 w-8 object-contain" />
+              Kinova Admin
+            </div>
             <div className="text-xs text-panel/60">{name}</div>
           </div>
           <div className="flex gap-3 text-xs md:mt-3">

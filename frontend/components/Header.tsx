@@ -38,7 +38,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-parchment">
       <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" aria-label="Kinova Arts" className="flex items-center pl-12">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {logoFailed ? (
             <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded bg-ink font-display font-semibold text-gold">
@@ -46,13 +46,12 @@ export default function Header() {
             </span>
           ) : (
             <img
-              src="/images/KinovaLogoLight.jpg"
+              src="/images/kinova-primary-logo.png"
               alt=""
               onError={() => setLogoFailed(true)}
-              className="h-8 w-8 rounded object-contain"
+              className="h-16 w-24 object-contain"
             />
           )}
-          <span className="font-display text-xl font-semibold">Kinova Arts</span>
         </Link>
 
         {/* Desktop nav */}

@@ -5,7 +5,14 @@ export default function Footer() {
     <footer className="border-t border-line px-6 py-10 text-sm text-ink/70">
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 md:grid-cols-4">
         <div>
-          <div className="font-display text-lg font-semibold text-ink">Kinova Arts</div>
+          <Link href="/" className="inline-block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/kinova-primary-logo.png"
+              alt="Kinova Arts"
+              className="h-auto w-48 max-w-full object-contain object-left"
+            />
+          </Link>
           <p className="mt-2 max-w-xs">
             A curated gallery of hand-made African arts and crafts, sourced directly from artisans across the continent.
           </p>
